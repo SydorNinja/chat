@@ -1,6 +1,7 @@
 var bcrypt = require('bcryptjs');
 var _ = require('underscore');
 var cryptojs = require('crypto-js');
+var jwt = require('jsonwebtoken');
 
 module.exports = function(sequelize, DataTypes) {
 	return user = sequelize.define('user', {
@@ -76,17 +77,20 @@ module.exports = function(sequelize, DataTypes) {
 		classMethods: {
 			authenticate: function(body) {
 				return new Promise(function(resolve, reject) {
-					if (!_.isString(body.email) || !_.isString(body.password)) {
+					if (!_.isString(body.username) || !_.isString(body.password)) {
+						console.log('not string ' + body.password + body.username);
 						return reject();
 					}
 					user.findOne({
 						where: {
-							email: body.email
+							username: body.username
 						}
 					}).then(function(user) {
 						if (!user || !bcrypt.compareSync(body.password, user.get('password_hash'))) {
+							console.log('password error');
 							return reject();
 						}
+						console.log(user);
 						resolve(user);
 
 
@@ -138,7 +142,7 @@ module.exports = function(sequelize, DataTypes) {
 					}, 'qwerty098');
 					return token;
 				} catch (e) {
-					console.error(e);
+					console.error("Failed to generate token." + e);
 					return undefined;
 				}
 			}
