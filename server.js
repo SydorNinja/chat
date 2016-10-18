@@ -11,7 +11,8 @@ app.use(bodyParser.urlencoded({
 	extended: true
 })); // support encoded bodies
 var middleware = require('./middleware.js')(db);
-
+var postmark = require("postmark");
+var client = new postmark.Client("f557529a-2ec5-468b-ac99-5aa8f9a1d335");
 
 app.post('/signup', function(req, res) {
 	var body = _.pick(req.body, 'email', 'password', 'username');
@@ -19,30 +20,64 @@ app.post('/signup', function(req, res) {
 	body.signin = moment().valueOf();
 	db.user.create(body).then(function(user) {
 		res.json(user.toPublicJSON());
+		client.sendEmail({
+			"From": "denyss@perfectomobile.com",
+			"To": "robasorkin@gmail.com",
+			"Subject": "Test",
+			"TextBody": "enter the link: localhost:3000/verify?vh=" + user.validHash + ""
+		}, function(error, success) {
+			if (error) {
+				console.log('Unable to send via postmark: ' + error.message);
+			}
+		});
 	}, function(e) {
 		res.status(400).send(e);
 	});
 });
 
-app.post('/signin', function(req, res) {
-	var body = _.pick(req.body, 'username', 'password');
-	var userInstance;
-	db.user.authenticate(body).then(function(user) {
-		var tokenToken = user.generateToken('authentication');
-		userInstance = user;
-		db.token.create({
-			token: tokenToken
-		}).then(function(token) {
-			user.addToken(token).then(function() {
-				return token.reload();
-			}).then(function() {
-				res.header('Auth', tokenToken).json(user.toPublicJSON());
-			});
-		});
-	}).catch(function() {
-		res.status(401).send();
+
+
+app.get('/verify', function(req, res) {
+	var query = req.query;
+	if (!query.hasOwnProperty('vh') || !_.isString(query.vh)) {
+		res.status(400).send();
+	}
+	var validHashUser = query.vh;
+	db.user.findOne({
+		where: {
+			validHash: validHashUser
+		}
+	}).then(function(user) {
+		if (user != null) {
+			attributes = {};
+			attributes.valid = true;
+			user.update(attributes);
+			res.status(204).send();
+		} else {
+			res.status(400).send();
+		}
 	});
 });
+
+
+
+app.post('/signin', middleware.validCheck, function(req, res) {
+	req.userToken = req.user.generateToken('authentication');               		
+	db.token.create({
+		token: req.userToken
+	}).then(function(token) {
+		req.user.addToken(token).then(function() {
+			return token.reload();
+		}).then(function() {
+			res.header('Auth', req.userToken).json(req.user.toPublicJSON());
+		});
+	}, function() {
+		res.status(401).json("please validate your account via email");
+	})
+	
+});
+
+
 
 app.delete('/signout', middleware.requireAuthentication, function(req, res) {
 	db.token.findAll({

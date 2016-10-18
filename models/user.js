@@ -29,18 +29,20 @@ module.exports = function(sequelize, DataTypes) {
 		email: {
 			type: DataTypes.STRING,
 			allowNull: false,
-			unique: true,			
+			unique: true,
 			validate: {
 				isEmail: true
+			},
+			set: function(value) {
+				var salt = bcrypt.genSaltSync(10);
+				var hashed = bcrypt.hashSync(value, salt);
+				this.setDataValue('validHash',hashed);
+				this.setDataValue('email', value);
 			}
 		},
 		validHash: {
 			type: DataTypes.STRING,
-			set: function() {
-				var salt = bcrypt.genSaltSync(10);
-				var hashed = bcrypt.hashSync(this.email, salt);
-				this.setDataValue('validHash', hashed);
-			}
+			allowNull: false
 		},
 		valid: {
 			type: DataTypes.BOOLEAN
