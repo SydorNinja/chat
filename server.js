@@ -184,7 +184,9 @@ app.delete('/user', function(req, res) {
 	});
 });
 
-db.sequelize.sync().then(function() {
+db.sequelize.sync({
+	force: true
+}).then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');
 	});

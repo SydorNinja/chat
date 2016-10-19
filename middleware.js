@@ -4,7 +4,7 @@ var _ = require('underscore');
 module.exports = function(db) {
 	return {
 		requireAuthentication: function(req, res, next) {
-			var token = req.get('Auth') || '';
+			var token = req.get('Auth');
 
 			db.token.findOne({
 				where: {
@@ -12,10 +12,12 @@ module.exports = function(db) {
 				}
 			}).then(function(tokenInstance) {
 				if (!tokenInstance) {
-					throw new Error();
+					res.status(401).send();
 				}
 				req.token = tokenInstance;
 				return db.user.findByToken(token);
+			}, function() {
+				res.status(401).send();
 			}).then(function(user) {
 				if (user.valid != true) {
 					res.status(401).json("please validate your account via email");
@@ -28,15 +30,17 @@ module.exports = function(db) {
 		},
 		validCheck: function(req, res, next) {
 			var body = _.pick(req.body, 'username', 'password');
-			db.user.authenticate(body).then(function(user) {				
-				if(user != null && user.valid == true){  
+			db.user.authenticate(body).then(function(user) {
+				if (user != null && user.valid == true) {
 					req.user = user;
 					next();
-           		} else {
+				} else {
 					res.status(401).json("please validate your account via email");
-				} 
-			});               
-			
+				}
+			}, function() {
+				res.status(401).send();
+			});
+
 		}
 	};
 };
