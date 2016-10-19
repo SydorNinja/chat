@@ -22,7 +22,7 @@ app.post('/signup', function(req, res) {
 		res.json(user.toPublicJSON());
 		client.sendEmail({
 			"From": "denyss@perfectomobile.com",
-			"To": "robasorkin@gmail.com",
+			"To": "" + body.email + "",
 			"Subject": "Test",
 			"TextBody": "enter the link: localhost:3000/verify?vh=" + user.validHash + ""
 		}, function(error, success) {
@@ -59,10 +59,78 @@ app.get('/verify', function(req, res) {
 	});
 });
 
+app.put('/changePassword', middleware.requireAuthentication, function(req, res) {
+	var body = _.pick(req.body, "username", "password", "newPassword");
+	var up = {
+		username: body.username,
+		password: body.password
+	};
+	if (body === null || body.username === null || body.password === null || body.newPassword === null) {
+		return req.status(401).send();
+	} else {
+		user.authenticate(up).then(function(user) {
+			var attributes = {};
+			attributes.username = body.username;
+			attributes.password = body.newPassword;
+			req.user.update(attributes);
+			res.status(204).send();
+		}, function() {
+			res.status(401).send();
+		});
+	}
+});
 
+app.post('/forgotPassword', function(req, res) {
+	var body = _.pick(req.body, "email");
+	if (body === null) {
+		return req.status(401).send();
+	} else {
+		user.findOne({
+			where: {
+				email: body.email
+			}
+		}).then(function(user) {
+			client.sendEmail({
+				"From": "denyss@perfectomobile.com",
+				"To": "" + body.email + "",
+				"Subject": "Restart your password",
+				"TextBody": "enter the link: localhost:3000/getPassword?ph=" + user.password_hash + ""
+			}, function(error, success) {
+				if (error) {
+					console.log('Unable to send via postmark: ' + error.message);
+				}
+				res.send("sent");
+			});
+		}, function(e) {
+			res.send("sent");
+		});
+	}
+});
+
+app.get('/getPassword', function(req, res) {
+	var query = req.query;
+	if (!query.hasOwnProperty('ph')) {
+		res.status(401).send();
+	} else {
+		user.findOne({
+			where: {
+				password_hash: query.ph
+			}
+		}).then(function(user) {
+			var password = Math.floor(Math.random() * 1000000000 + 1);
+			user.update({
+				password: password.toString()
+			});
+			user.reload();
+			res.send('your new password is: ' + password);
+		}, function() {
+			res.status(401).send();
+		});
+	}
+});
 
 app.post('/signin', middleware.validCheck, function(req, res) {
-	req.userToken = req.user.generateToken('authentication');               		
+	req.userToken = req.user.generateToken('authentication');
 	db.token.create({
 		token: req.userToken
 	}).then(function(token) {
@@ -74,9 +142,8 @@ app.post('/signin', middleware.validCheck, function(req, res) {
 	}, function() {
 		res.status(401).json("please validate your account via email");
 	})
-	
-});
 
+});
 
 
 app.delete('/signout', middleware.requireAuthentication, function(req, res) {
@@ -117,9 +184,7 @@ app.delete('/user', function(req, res) {
 	});
 });
 
-db.sequelize.sync({
-	force: true
-}).then(function() {
+db.sequelize.sync().then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');
 	});

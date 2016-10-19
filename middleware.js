@@ -30,7 +30,7 @@ module.exports = function(db) {
 			var body = _.pick(req.body, 'username', 'password');
 			db.user.authenticate(body).then(function(user) {				
 				if(user != null && user.valid == true){  
-					req.user = user; 
+					req.user = user;
 					next();
            		} else {
 					res.status(401).json("please validate your account via email");
