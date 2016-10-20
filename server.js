@@ -18,6 +18,13 @@ app.post('/signup', function(req, res) {
 	var body = _.pick(req.body, 'email', 'password', 'username');
 	body.signup = moment().valueOf();
 	body.signin = moment().valueOf();
+	if (body.username == null) {
+		var email = body.email;
+		var searched = email.search('@');
+		var sliced = email.slice(searched);
+		var replaced = email.replace(sliced, " ").trim();
+		body.username = replaced;
+	}
 	db.user.create(body).then(function(user) {
 		res.json(user.toPublicJSON());
 		client.sendEmail({
@@ -27,15 +34,13 @@ app.post('/signup', function(req, res) {
 			"TextBody": "enter the link: localhost:3000/verify?vh=" + user.validHash + ""
 		}, function(error, success) {
 			if (error) {
-				console.log('Unable to send via postmark: ' + error.message);
+				console.error('Unable to send via postmark: ' + error.message);
 			}
 		});
 	}, function(e) {
 		res.status(400).send(e);
 	});
 });
-
-
 
 app.get('/verify', function(req, res) {
 	var query = req.query;
@@ -137,11 +142,16 @@ app.post('/signin', middleware.validCheck, function(req, res) {
 		req.user.addToken(token).then(function() {
 			return token.reload();
 		}).then(function() {
+			var attributes = {
+				signin: moment().valueOf()
+			};
+			req.user.update(attributes);
+			req.user.reload();
 			res.header('Auth', req.userToken).json(req.user.toPublicJSON());
 		});
 	}, function() {
 		res.status(401).json("please validate your account via email");
-	})
+	});
 
 });
 
