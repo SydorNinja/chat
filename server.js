@@ -21,16 +21,15 @@ app.post('/signup', function(req, res) {
 	if (body.username == null) {
 		var email = body.email;
 		var searched = email.search('@');
-		var sliced = email.slice(searched);
-		var replaced = email.replace(sliced, " ").trim();
-		body.username = replaced;
+		var sliced = email.slice(0 , searched - 1).trim();
+		body.username = sliced;
 	}
 	db.user.create(body).then(function(user) {
 		res.json(user.toPublicJSON());
 		client.sendEmail({
 			"From": "denyss@perfectomobile.com",
 			"To": "" + body.email + "",
-			"Subject": "Test",
+			"Subject": "Your new Todo account",
 			"TextBody": "enter the link: localhost:3000/verify?vh=" + user.validHash + ""
 		}, function(error, success) {
 			if (error) {
