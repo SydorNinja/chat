@@ -21,8 +21,10 @@ app.post('/signup', function(req, res) {
 	if (body.username == null) {
 		var email = body.email;
 		var searched = email.search('@');
-		var sliced = email.slice(0 , searched - 1).trim();
-		body.username = sliced;
+		if (searched != -1) {
+			var sliced = email.slice(0, searched).trim();
+			body.username = sliced;
+		}
 	}
 	db.user.create(body).then(function(user) {
 		res.json(user.toPublicJSON());
