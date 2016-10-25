@@ -13,6 +13,14 @@ app.use(bodyParser.urlencoded({
 var middleware = require('./middleware.js')(db);
 var postmark = require("postmark");
 var client = new postmark.Client("f557529a-2ec5-468b-ac99-5aa8f9a1d335");
+var multer = require('multer')
+var fs = require('fs');
+var upload = multer({
+	dest: 'uploads/'
+})
+var invite = require('./invite.js');
+app.use(express.static(__dirname + '/public'));
+
 
 app.post('/signup', function(req, res) {
 	var body = _.pick(req.body, 'email', 'password', 'username');
@@ -32,7 +40,7 @@ app.post('/signup', function(req, res) {
 			"From": "denyss@perfectomobile.com",
 			"To": "" + body.email + "",
 			"Subject": "Your new Todo account",
-			"TextBody": "enter the link: localhost:3000/verify?vh=" + user.validHash + ""
+			"TextBody": "enter the link: http://localhost:3000/verify?vh=" + user.validHash + ""
 		}, function(error, success) {
 			if (error) {
 				console.error('Unable to send via postmark: ' + error.message);
@@ -41,6 +49,91 @@ app.post('/signup', function(req, res) {
 	}, function(e) {
 		res.status(400).send(e);
 	});
+});
+
+app.post('/upload', upload.single('sampleFile'), function(req, res, next) {
+	console.log(req.file.path);
+	fs.readFile(req.file.path, function(err, data) {
+		var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
+		db.user.findOne({
+			where: {
+				id: 1
+			}
+		}).then(function(user) {
+			if (user != null) {
+				user.update({
+					photo: base64Image
+				});
+				res.status(204).send();
+			} else {
+				res.status(401).send();
+			}
+		}, function(e) {
+			res.status(401).send();
+		});
+	});
+	res.status(200).send();
+	// req.body will hold the text fields, if there were any
+})
+
+app.get('/user/:username', function(req, res) {
+	var username = req.params.username;
+	db.user.findOne({
+		where: {
+			username: username
+		}
+	}).then(function(user) {
+		if (user == null) {
+			res.status(401).send();
+		} else {
+			user.signin = moment.utc(user.signin).local().format('MMMM Do, h:mm a');
+			user.signup = moment.utc(user.signup).local().format('MMMM Do YYYY, h:mm a');
+			res.send(user.toPublicJSON());
+		}
+	}, function() {
+		res.status(401).send();
+	});
+});
+
+
+app.post('/changeUsername', middleware.requireAuthentication, function(req, res) {
+	var body = _.pick(req.body, 'newUsername');
+	if (_.isString(body.newUsername)) {
+		var attributes = {
+			username: body.newUsername.trim()
+		};
+		req.user.update(attributes);
+		res.send('updated username: ' + attributes.username);
+	} else {
+		res.status(401).send();
+	}
+});
+
+app.post('/room', function(req, res) {
+	try {
+		var body = _.pick(req.body, 'private', 'title', 'password');
+		if (body != null && body.title != null) {
+			if (body.private === true) {
+				if (_.isString(body.password)) {
+					body.invite = invite(body.password);
+				} else {
+					res.status(401).send();
+				}
+			} else {
+				body.invite = invite('t' + body.title);
+			}
+			db.room.create(body).then(function(room) {
+				var publicFormRoom = _.pick(room, 'private', 'title', 'password');
+				res.json(publicFormRoom);
+			}, function() {
+				res.status(401).send();
+			});
+		} else {
+			res.status(401).send();
+		}
+	}catch (e) {
+		res.status(401).send();
+	}
 });
 
 app.get('/verify', function(req, res) {
