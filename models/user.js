@@ -13,8 +13,10 @@ module.exports = function(sequelize, DataTypes) {
 				len: [4, 12]
 			}
 		},
-
-
+		bigRole: {
+			type: DataTypes.BOOLEAN,
+			defaultValue: false
+		},
 		signup: {
 			type: DataTypes.INTEGER,
 			allowNull: false

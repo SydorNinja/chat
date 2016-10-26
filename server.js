@@ -109,7 +109,7 @@ app.post('/changeUsername', middleware.requireAuthentication, function(req, res)
 	}
 });
 
-app.post('/room', function(req, res) {
+app.post('/room', middleware.requireAuthentication, function(req, res) {
 	try {
 		var body = _.pick(req.body, 'private', 'title', 'password');
 		if (body != null && body.title != null) {
@@ -123,6 +123,9 @@ app.post('/room', function(req, res) {
 				body.invite = invite('t' + body.title);
 			}
 			db.room.create(body).then(function(room) {
+				req.user.addRoom(room, {
+					role: 1
+				});
 				var publicFormRoom = _.pick(room, 'private', 'title', 'password');
 				res.json(publicFormRoom);
 			}, function() {
@@ -131,8 +134,37 @@ app.post('/room', function(req, res) {
 		} else {
 			res.status(401).send();
 		}
-	}catch (e) {
+	} catch (e) {
 		res.status(401).send();
+	}
+});
+
+app.post('/loginRoom', middleware.requireAuthentication, function(req, res) {
+	var body = req.body;
+	if (body === null || body.title === null) {
+		res.status(401).send();
+	} else {
+		if (body.password != null) {
+			body.private = true;
+		}
+		if (!_.isString(body.password) && body.private === true) {
+			res.status(400).send('password error');
+		}
+		db.room.findOne({
+			where: body
+		}).then(function(room) {
+			if (room === null) {
+				res.status(401).send();
+			} else {
+				var user = req.user;
+				user.addRoom(room, {
+					role: 0
+				});
+				res.status(204).send();
+			}
+		}, function() {
+			res.status(401).send();
+		});
 	}
 });
 
@@ -288,9 +320,11 @@ app.delete('/user', function(req, res) {
 	});
 });
 
-db.sequelize.sync({
-	force: true
-}).then(function() {
+db.sequelize.sync(
+	/*{
+		force: true
+	}*/
+).then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');
 	});

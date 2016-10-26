@@ -22,9 +22,11 @@ db.UsersRooms = sequelize.import(__dirname + '/models/UsersRooms.js');
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 db.token.belongsTo(db.user);
+db.user.hasMany(db.token);
 db.room.belongsToMany(db.user, {
 	through: db.UsersRooms
 });
+db.user.belongsToMany(db.room, {through: db.UsersRooms});
 
 
 
