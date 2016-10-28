@@ -281,7 +281,6 @@ app.post('/signin', middleware.validCheck, function(req, res) {
 
 });
 
-
 app.delete('/signout', middleware.requireAuthentication, function(req, res) {
 	db.token.findAll({
 		where: {
@@ -297,24 +296,17 @@ app.delete('/signout', middleware.requireAuthentication, function(req, res) {
 	});
 });
 
-app.delete('/user', function(req, res) {
-	var body = _.pick(req.body, 'username', 'password');
-	db.user.authenticate(body).then(function(user) {
-		var userInstance = user;
-		db.token.findAll({
-			where: {
-				userId: user.get('id')
-			}
-		}).then(function(todos) {
-			todos.forEach(function(todo) {
-				todo.destroy();
-			});
+app.delete('/user', middleware.requireAuthentication, function(req, res) {
+	db.token.findAll({
+		where: {
+			userId: req.user.get('id')
+		}
+	}).then(function(tokens) {
+		tokens.forEach(function(token) {
+			token.destroy();
+			req.user.destroy();
 		});
-		user.destroy().then(function() {
-			res.status(204).send();
-		}, function() {
-			res.status(500).send();
-		});
+		res.status(204).send();
 	}, function() {
 		res.status(500).send();
 	});
