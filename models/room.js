@@ -10,8 +10,7 @@ module.exports = function(sequelize, DataTypes) {
 			}
 		},
 		icon: {
-			type: DataTypes.STRING,
-			allowNull: true,
+			type: DataTypes.STRING
 		},
 		private: {
 			type: DataTypes.BOOLEAN,

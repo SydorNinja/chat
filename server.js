@@ -126,7 +126,7 @@ app.post('/room', middleware.requireAuthentication, function(req, res) {
 				req.user.addRoom(room, {
 					role: 1
 				});
-				var publicFormRoom = _.pick(room, 'private', 'title', 'password');
+				var publicFormRoom = _.pick(room, 'private', 'title');
 				res.json(publicFormRoom);
 			}, function() {
 				res.status(401).send();
@@ -281,6 +281,66 @@ app.post('/signin', middleware.validCheck, function(req, res) {
 
 });
 
+app.delete('/userFromRoom', middleware.requireAuthentication, function(req, res) {
+	var body = _.pick(req.body, 'room', 'password', 'userToRemove');
+	var where = {};
+	where.title = body.room;
+	if (body.password) {
+		where.password = body.password
+	}
+	db.room.findOne({
+		where: where
+	}).then(function(room) {
+		if (room === null) {
+			res.status(401).send('room');
+		}
+		db.UsersRooms.findOne({
+			where: {
+				roomId: room.get('id'),
+				userId: req.user.get('id')
+			}
+		}).then(function(connection) {
+			if (connection === null) {
+				res.status(401).send('connection');
+			}
+			if (connection.role == true) {
+				db.user.findOne({
+					where: {
+						username: body.userToRemove
+					}
+				}).then(function(deleteUser) {
+					if (deleteUser === null) {
+						res.status(401).send('2user');
+					}
+					db.UsersRooms.findOne({
+						where: {
+							roomId: room.get('id'),
+							userId: deleteUser.get('id')
+						}
+					}).then(function(connection) {
+						if (connection != null) {
+							connection.destroy();
+							res.json(deleteUser.toPublicJSON());
+						} else {
+							res.status(401).send('2connection');
+						}
+					}, function() {
+						res.status(401).send('2connection');
+					});
+				}, function() {
+					res.status(401).send('2user');
+				});
+			} else {
+				res.status(401).send('You don\'t have a premmision');
+			}
+		}, function() {
+			res.status(401).send('connection');
+		});
+	}, function() {
+		res.status(401).send('room');
+	});
+});
+
 app.delete('/signout', middleware.requireAuthentication, function(req, res) {
 	db.token.findAll({
 		where: {
@@ -312,11 +372,9 @@ app.delete('/user', middleware.requireAuthentication, function(req, res) {
 	});
 });
 
-db.sequelize.sync(
-	/*{
-		force: true
-	}*/
-).then(function() {
+db.sequelize.sync({
+	force: true
+}).then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');
 	});
