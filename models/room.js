@@ -1,4 +1,3 @@
-var _ = require('underscore');
 module.exports = function(sequelize, DataTypes) {
 	return room = sequelize.define('room', {
 		title: {

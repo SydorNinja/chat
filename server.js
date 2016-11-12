@@ -2,7 +2,6 @@ var PORT = process.env.PORT || 3000;
 var express = require('express');
 var app = express();
 var http = require('http').Server(app);
-var moment = require('moment');
 var _ = require('underscore');
 var db = require('./db.js');
 var bodyParser = require('body-parser');
@@ -11,85 +10,67 @@ app.use(bodyParser.urlencoded({
 	extended: true
 })); // support encoded bodies
 var middleware = require('./middleware.js')(db);
-var postmark = require("postmark");
-var client = new postmark.Client("f557529a-2ec5-468b-ac99-5aa8f9a1d335");
-var multer = require('multer')
+var roomcontroller = require('./roomcontroller');
+var usercontroller = require('./usercontroller.js');
+var usersroomscontroller = require('./usersroomscontroller');
+var multer = require('multer');
 var fs = require('fs');
 var upload = multer({
-	dest: 'uploads/'
-})
-var invite = require('./invite.js');
+	dest: '/uploads'
+});
 app.use(express.static(__dirname + '/public'));
 
 
 app.post('/signup', function(req, res) {
 	var body = _.pick(req.body, 'email', 'password', 'username');
-	body.signup = moment().valueOf();
-	body.signin = moment().valueOf();
-	if (body.username == null) {
-		var email = body.email;
-		var searched = email.search('@');
-		if (searched != -1) {
-			var sliced = email.slice(0, searched).trim();
-			body.username = sliced;
-		}
-	}
-	db.user.create(body).then(function(user) {
+	usercontroller.signup(body).then(function(user) {
 		res.json(user.toPublicJSON());
-		client.sendEmail({
-			"From": "denyss@perfectomobile.com",
-			"To": "" + body.email + "",
-			"Subject": "Your new Todo account",
-			"TextBody": "enter the link: http://localhost:3000/verify?vh=" + user.validHash + ""
-		}, function(error, success) {
-			if (error) {
-				console.error('Unable to send via postmark: ' + error.message);
-			}
-		});
-	}, function(e) {
-		res.status(400).send(e);
+	}, function() {
+		res.status(400).send();
 	});
 });
 
 app.post('/upload', upload.single('sampleFile'), function(req, res, next) {
-	console.log(req.file.path);
-	fs.readFile(req.file.path, function(err, data) {
-		var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
-		db.user.findOne({
-			where: {
-				id: 1
-			}
-		}).then(function(user) {
-			if (user != null) {
-				user.update({
-					photo: base64Image
-				});
-				res.status(204).send();
-			} else {
-				res.status(401).send();
-			}
-		}, function(e) {
-			res.status(401).send();
+	try {
+		console.log(req.file.path);
+		fs.readFile(req.file.path, function(err, data) {
+			var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
+			fs.unlink(req.file.path);
+			db.user.findOne({
+				where: {
+					id: 1
+				}
+			}).then(function(user) {
+				if (user != null) {
+					user.update({
+						photo: base64Image
+					});
+					res.status(200).send("uploaded");
+				} else {
+					throw new Error();
+				}
+			}, function(e) {
+				throw new Error();
+			});
 		});
+	} catch (e) {
+		res.status(401).send();
+	}
+});
+
+app.delete('/room', middleware.requireAuthentication, function(req, res) {
+	var body = _.pick(req.body, 'private', 'password', 'title');
+	roomcontroller.deleteRoom(req.user, body).then(function() {
+		res.status(204).send();
+	}, function() {
+		res.status(401).send();
 	});
-	res.status(200).send();
-	// req.body will hold the text fields, if there were any
-})
+});
 
 app.get('/user/:username', function(req, res) {
 	var username = req.params.username;
-	db.user.findOne({
-		where: {
-			username: username
-		}
-	}).then(function(user) {
-		if (user == null) {
-			res.status(401).send();
-		} else {
-			user.signin = moment.utc(user.signin).local().format('MMMM Do, h:mm a');
-			user.signup = moment.utc(user.signup).local().format('MMMM Do YYYY, h:mm a');
-			res.send(user.toPublicJSON());
-		}
+	usercontroller.findByUsername(username).then(function(user) {
+		res.json(user.toPublicJSON());
 	}, function() {
 		res.status(401).send();
 	});
@@ -98,283 +79,106 @@ app.get('/user/:username', function(req, res) {
 
 app.post('/changeUsername', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, 'newUsername');
-	if (_.isString(body.newUsername)) {
-		var attributes = {
-			username: body.newUsername.trim()
-		};
-		req.user.update(attributes);
-		res.send('updated username: ' + attributes.username);
-	} else {
-		res.status(401).send();
-	}
+	usercontroller.changeUsername(req.user, body.newUsername).then(function(username) {
+		res.send("New username: " + username);
+	}, function() {
+		res.status(400).send();
+	});
 });
 
 app.post('/room', middleware.requireAuthentication, function(req, res) {
-	try {
-		var body = _.pick(req.body, 'private', 'title', 'password');
-		if (body != null && body.title != null) {
-			if (body.private === true) {
-				if (_.isString(body.password)) {
-					body.invite = invite(body.password);
-				} else {
-					res.status(401).send();
-				}
-			} else {
-				body.invite = invite('t' + body.title);
-			}
-			db.room.create(body).then(function(room) {
-				req.user.addRoom(room, {
-					role: 1
-				});
-				var publicFormRoom = _.pick(room, 'private', 'title');
-				res.json(publicFormRoom);
-			}, function() {
-				res.status(401).send();
-			});
-		} else {
-			res.status(401).send();
-		}
-	} catch (e) {
+	var body = _.pick(req.body, 'private', 'title', 'password');
+	roomcontroller.makeRoom(req.user, body).then(function(publicFormRoom) {
+		res.json(publicFormRoom);
+	}, function() {
 		res.status(401).send();
-	}
+	});
+
 });
 
 app.post('/loginRoom', middleware.requireAuthentication, function(req, res) {
 	var body = req.body;
-	if (body === null || body.title === null) {
+	usersroomscontroller.loginRoom(req.user, body).then(function() {
+		res.status(204).send();
+	}, function() {
 		res.status(401).send();
-	} else {
-		if (body.password != null) {
-			body.private = true;
-		}
-		if (!_.isString(body.password) && body.private === true) {
-			res.status(400).send('password error');
-		}
-		db.room.findOne({
-			where: body
-		}).then(function(room) {
-			if (room === null) {
-				res.status(401).send();
-			} else {
-				var user = req.user;
-				user.addRoom(room, {
-					role: 0
-				});
-				res.status(204).send();
-			}
-		}, function() {
-			res.status(401).send();
-		});
-	}
+	});
 });
 
 app.get('/verify', function(req, res) {
 	var query = req.query;
-	if (!query.hasOwnProperty('vh') || !_.isString(query.vh)) {
-		res.status(400).send();
-	}
-	var validHashUser = query.vh;
-	db.user.findOne({
-		where: {
-			validHash: validHashUser
-		}
-	}).then(function(user) {
-		if (user != null) {
-			attributes = {};
-			attributes.valid = true;
-			user.update(attributes);
-			res.status(204).send();
-		} else {
-			res.status(400).send();
-		}
+	usercontroller.verify(query).then(function() {
+		res.status(204).send();
+	}, function() {
+		res.status(401).send();
 	});
 });
 
 app.put('/changePassword', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, "username", "password", "newPassword");
-	var up = {
-		username: body.username,
-		password: body.password
-	};
-	if (body === null || body.username === null || body.password === null || body.newPassword === null) {
-		return req.status(401).send();
-	} else {
-		user.authenticate(up).then(function(user) {
-			var attributes = {};
-			attributes.username = body.username;
-			attributes.password = body.newPassword;
-			req.user.update(attributes);
-			res.status(204).send();
-		}, function() {
-			res.status(401).send();
-		});
-	}
+	usercontroller.updatePassword(req.user, body).then(function() {
+		res.status(204).send();
+	}, function() {
+		res.status(401).send();
+	});
 });
 
 app.post('/forgotPassword', function(req, res) {
 	var body = _.pick(req.body, "email");
-	if (body === null) {
-		return req.status(401).send();
-	} else {
-		user.findOne({
-			where: {
-				email: body.email
+	usercontroller.forgotPassword(body).then(function() {
+			res.send('sent to that email');
+		},
+		function(error) {
+			if (error) {
+				return res.status(400).send("bad syntax");
 			}
-		}).then(function(user) {
-			client.sendEmail({
-				"From": "denyss@perfectomobile.com",
-				"To": "" + body.email + "",
-				"Subject": "Restart your password",
-				"TextBody": "enter the link: localhost:3000/getPassword?ph=" + user.password_hash + ""
-			}, function(error, success) {
-				if (error) {
-					console.log('Unable to send via postmark: ' + error.message);
-				}
-				res.send("sent");
-			});
-		}, function(e) {
-			res.send("sent");
+			res.send('sent to that email');
 		});
-	}
 });
 
 app.get('/getPassword', function(req, res) {
 	var query = req.query;
-	if (!query.hasOwnProperty('ph')) {
+	usercontroller.getPassword(query).then(function(password) {
+		res.send('your new password is: ' + password);
+	}, function() {
 		res.status(401).send();
-	} else {
-		user.findOne({
-			where: {
-				password_hash: query.ph
-			}
-		}).then(function(user) {
-			var password = Math.floor(Math.random() * 1000000000 + 1);
-			user.update({
-				password: password.toString()
-			});
-			user.reload();
-			res.send('your new password is: ' + password);
-		}, function() {
-			res.status(401).send();
-		});
-	}
+	});
 });
 
 app.post('/signin', middleware.validCheck, function(req, res) {
-	req.userToken = req.user.generateToken('authentication');
-	db.token.create({
-		token: req.userToken
-	}).then(function(token) {
-		req.user.addToken(token).then(function() {
-			return token.reload();
-		}).then(function() {
-			var attributes = {
-				signin: moment().valueOf()
-			};
-			req.user.update(attributes);
-			req.user.reload();
-			res.header('Auth', req.userToken).json(req.user.toPublicJSON());
-		});
+	usercontroller.signin(req.user).then(function(token) {
+		res.header('Auth', token).json(req.user.toPublicJSON());
 	}, function() {
-		res.status(401).json("please validate your account via email");
+		res.status(401).send();
 	});
-
 });
 
 app.delete('/userFromRoom', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, 'room', 'password', 'userToRemove');
-	var where = {};
-	where.title = body.room;
-	if (body.password) {
-		where.password = body.password
-	}
-	db.room.findOne({
-		where: where
-	}).then(function(room) {
-		if (room === null) {
-			res.status(401).send('room');
-		}
-		db.UsersRooms.findOne({
-			where: {
-				roomId: room.get('id'),
-				userId: req.user.get('id')
-			}
-		}).then(function(connection) {
-			if (connection === null) {
-				res.status(401).send('connection');
-			}
-			if (connection.role == true) {
-				db.user.findOne({
-					where: {
-						username: body.userToRemove
-					}
-				}).then(function(deleteUser) {
-					if (deleteUser === null) {
-						res.status(401).send('2user');
-					}
-					db.UsersRooms.findOne({
-						where: {
-							roomId: room.get('id'),
-							userId: deleteUser.get('id')
-						}
-					}).then(function(connection) {
-						if (connection != null) {
-							connection.destroy();
-							res.json(deleteUser.toPublicJSON());
-						} else {
-							res.status(401).send('2connection');
-						}
-					}, function() {
-						res.status(401).send('2connection');
-					});
-				}, function() {
-					res.status(401).send('2user');
-				});
-			} else {
-				res.status(401).send('You don\'t have a premmision');
-			}
-		}, function() {
-			res.status(401).send('connection');
-		});
-	}, function() {
-		res.status(401).send('room');
-	});
+	usersroomscontroller.deleteUserFromRoom()
 });
 
 app.delete('/signout', middleware.requireAuthentication, function(req, res) {
-	db.token.findAll({
-		where: {
-			userId: req.user.get('id')
-		}
-	}).then(function(tokens) {
-		tokens.forEach(function(token) {
-			token.destroy();
-		});
+	usercontroller.signout(req.user).then(function() {
 		res.status(204).send();
 	}, function() {
-		res.status(500).send();
+		res.status(401).send();
 	});
 });
 
 app.delete('/user', middleware.requireAuthentication, function(req, res) {
-	db.token.findAll({
-		where: {
-			userId: req.user.get('id')
-		}
-	}).then(function(tokens) {
-		tokens.forEach(function(token) {
-			token.destroy();
-			req.user.destroy();
-		});
+	usercontroller.deleteUser(req.user).then(function() {
 		res.status(204).send();
 	}, function() {
-		res.status(500).send();
+		res.status(401).send();
 	});
 });
 
-db.sequelize.sync({
-	force: true
-}).then(function() {
+db.sequelize.sync(
+	/*{
+		force: true
+	}*/
+).then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');
 	});

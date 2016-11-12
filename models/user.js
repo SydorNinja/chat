@@ -38,7 +38,7 @@ module.exports = function(sequelize, DataTypes) {
 			set: function(value) {
 				var salt = bcrypt.genSaltSync(10);
 				var hashed = bcrypt.hashSync(value, salt);
-				this.setDataValue('validHash',hashed);
+				this.setDataValue('validHash', hashed);
 				this.setDataValue('email', value);
 			}
 		},
@@ -94,7 +94,6 @@ module.exports = function(sequelize, DataTypes) {
 							console.log('password error');
 							return reject();
 						}
-						console.log(user);
 						resolve(user);
 
 
