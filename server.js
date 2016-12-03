@@ -76,6 +76,14 @@ app.get('/user/:username', function(req, res) {
 	});
 });
 
+app.get('/publicRooms', function(req, res) {
+	roomcontroller.showPublicRooms().then(function(rooms) {
+		res.send(rooms);
+	}, function() {
+		res.status(401).send();
+	});
+});
+
 
 app.post('/changeUsername', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, 'newUsername');
@@ -94,6 +102,16 @@ app.post('/room', middleware.requireAuthentication, function(req, res) {
 		res.status(401).send();
 	});
 
+});
+
+app.put('/changeRoomDetails/:roomTitle', middleware.requireAuthentication, function(req, res) {
+	var roomTitle = req.params.roomTitle;
+	var body = req.body;
+	roomcontroller.changeRoomDetails(body, roomTitle, req.user).then(function() {
+		res.status(204).send();
+	}, function() {
+		res.status(401).send();
+	});
 });
 
 app.post('/loginRoom', middleware.requireAuthentication, function(req, res) {
@@ -120,6 +138,15 @@ app.put('/changePassword', middleware.requireAuthentication, function(req, res) 
 		res.status(204).send();
 	}, function() {
 		res.status(401).send();
+	});
+});
+
+app.get('/room/:title', function(req, res) {
+	var title = req.params.title;
+	roomcontroller.findRoomByTitle(title).then(function(publicFormRoom) {
+		res.json(publicFormRoom);
+	}, function() {
+		res.status(404);
 	});
 });
 
