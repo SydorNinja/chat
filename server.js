@@ -201,6 +201,14 @@ app.delete('/user', middleware.requireAuthentication, function(req, res) {
 	});
 });
 
+app.post('/connectViaInvite/:invite', middleware.requireAuthentication, function(req, res) {
+	usersroomscontroller.connectViaInvite(req.user, req.params.invite).then(function() {
+		res.status(204);
+	}, function() {
+		res.status(401)
+	});
+});
+
 db.sequelize.sync(
 	/*{
 		force: true

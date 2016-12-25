@@ -8,12 +8,12 @@ module.exports = {
 				if (body != null && body.title != null) {
 					if (body.private === true) {
 						if (_.isString(body.password)) {
-							body.invite = invite(body.password);
+							body.invite = + invite(body.password);
 						} else {
 							reject();
 						}
 					} else {
-						body.invite = invite('t' + body.title);
+						body.invite = invite(body.title);
 					}
 					db.room.create(body).then(function(room) {
 						user.addRoom(room, {

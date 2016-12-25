@@ -30,6 +30,20 @@ module.exports = {
 			}
 		});
 	},
+	connectViaInvite: function(user, invite) {
+		return new Promise(function(resolve, reject) {
+			db.room.findOne({where: {invite: invite}}).then(function(room){
+				if (room != null) {
+					user.addRoom(room, {role: 0});
+					resolve();
+				} else {
+					reject();
+				}
+			},function(){
+				reject();
+			});
+		});
+	},
 	deleteUserFromRoom: function(user, body) {
 		return new Promise(function(resolve, reject) {
 			var where = {};
