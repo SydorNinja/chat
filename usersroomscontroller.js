@@ -1,4 +1,3 @@
-
 var _ = require('underscore');
 var db = require('./db.js');
 module.exports = {
@@ -32,14 +31,20 @@ module.exports = {
 	},
 	connectViaInvite: function(user, invite) {
 		return new Promise(function(resolve, reject) {
-			db.room.findOne({where: {invite: invite}}).then(function(room){
+			db.room.findOne({
+				where: {
+					invite: invite
+				}
+			}).then(function(room) {
 				if (room != null) {
-					user.addRoom(room, {role: 0});
+					user.addRoom(room, {
+						role: 0
+					});
 					resolve();
 				} else {
 					reject();
 				}
-			},function(){
+			}, function() {
 				reject();
 			});
 		});

@@ -201,11 +201,12 @@ app.delete('/user', middleware.requireAuthentication, function(req, res) {
 	});
 });
 
-app.post('/connectViaInvite/:invite', middleware.requireAuthentication, function(req, res) {
-	usersroomscontroller.connectViaInvite(req.user, req.params.invite).then(function() {
-		res.status(204);
+app.post('/connectViaInvite', middleware.requireAuthentication, function(req, res) {
+	var body = _.pick(req.body, 'invite');
+	usersroomscontroller.connectViaInvite(req.user, body.invite).then(function() {
+		res.status(204).send();
 	}, function() {
-		res.status(401)
+		res.status(401).send();
 	});
 });
 
