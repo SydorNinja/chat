@@ -182,12 +182,24 @@ app.post('/signin', middleware.validCheck, function(req, res) {
 
 app.delete('/userFromRoom', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, 'room', 'password', 'userToRemove');
-	usersroomscontroller.deleteUserFromRoom()
+	usersroomscontroller.deleteUserFromRoom().then(function() {
+		res.status(204).send();
+	}, function() {
+		res.status(401).send();
+	});
 });
 
 app.delete('/signout', middleware.requireAuthentication, function(req, res) {
 	usercontroller.signout(req.user).then(function() {
 		res.status(204).send();
+	}, function() {
+		res.status(401).send();
+	});
+});
+
+app.get('/myRooms', middleware.requireAuthentication, function(req, res) {
+	usersroomscontroller.rooms(req.user).then(function(rooms) {
+		res.send('My Rooms:' + rooms);
 	}, function() {
 		res.status(401).send();
 	});

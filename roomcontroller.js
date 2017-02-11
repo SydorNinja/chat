@@ -8,7 +8,7 @@ module.exports = {
 				if (body != null && body.title != null) {
 					if (body.private === true) {
 						if (_.isString(body.password)) {
-							body.invite = + invite(body.password);
+							body.invite = +invite(body.password);
 						} else {
 							reject();
 						}

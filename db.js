@@ -29,7 +29,9 @@ db.user.hasMany(db.token);
 db.room.belongsToMany(db.user, {
 	through: db.UsersRooms
 });
-db.user.belongsToMany(db.room, {through: db.UsersRooms});
+db.user.belongsToMany(db.room, {
+	through: db.UsersRooms
+});
 
 
 

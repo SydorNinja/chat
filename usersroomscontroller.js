@@ -38,7 +38,7 @@ module.exports = {
 			}).then(function(room) {
 				if (room != null) {
 					user.addRoom(room, {
-						role: 0
+						role: 1
 					});
 					resolve();
 				} else {
@@ -104,6 +104,41 @@ module.exports = {
 				}, function() {
 					reject();
 				});
+			}, function() {
+				reject();
+			});
+		});
+	},
+	rooms: function(user) {
+		return new Promise(function(resolve, reject) {
+			var id = user.id;
+			var roomIdArray = [];
+			var roomTitleArray = [];
+			db.UsersRooms.findAll({
+				where: {
+					userId: id
+				}
+			}).then(function(connections) {
+				connections.forEach(function(connection) {
+					roomIdArray.push(connection.roomId);
+				});
+				for (var i = 0; i < roomIdArray.length; i++) {
+					if (i <= roomIdArray.length) {
+						db.room.findOne({
+							where: {
+								id: roomIdArray[i]
+							}
+						}).then(function(room) {
+							console.log('before: ' + roomTitleArray);
+							roomTitleArray.push(room.title);
+							console.log('after: ' + roomTitleArray);
+							if (i == roomIdArray.length) {
+								console.log('final: ' + roomTitleArray);
+								resolve(roomTitleArray);
+							}
+						});
+					}
+				}
 			}, function() {
 				reject();
 			});
