@@ -150,6 +150,15 @@ app.get('/room/:title', function(req, res) {
 	});
 });
 
+app.put('/favorite', middleware.requireAuthentication, function(req, res) {
+	var body = _.pick(req.body, "room", "favorite");
+	usersroomscontroller.favoriteChange(req.user, body).then(function() {
+		res.send('changed');
+	}, function(error) {
+		res.status(401).send(error);
+	});
+});
+
 app.post('/forgotPassword', function(req, res) {
 	var body = _.pick(req.body, "email");
 	usercontroller.forgotPassword(body).then(function() {
@@ -223,9 +232,9 @@ app.post('/connectViaInvite', middleware.requireAuthentication, function(req, re
 });
 
 db.sequelize.sync(
-	/*{
-		force: true
-	}*/
+	// {
+	// 	force: true
+	// }
 ).then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');

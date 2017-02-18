@@ -143,5 +143,48 @@ module.exports = {
 				reject();
 			});
 		});
+	},
+	favoriteChange: function(user, body) {
+		return new Promise(function(resolve, reject) {
+			var error;
+			var roomTitle = body.room;
+			var favoriteChange = body.favorite;
+			if (!_.isBoolean(favoriteChange)) {
+				return reject();
+			}
+			var attributes = {
+				favorite: favoriteChange
+			};
+			var userId = user.id;
+			var roomId;
+			db.room.findOne({
+				where: {
+					title: roomTitle
+				}
+			}).then(function(room) {
+				if (room) {
+					roomId = room.id;
+					db.UsersRooms.findOne({
+						where: {
+							userId: userId,
+							roomId: roomId
+						}
+					}).then(function(connection) {
+						if (connection) {
+							connection.update(attributes);
+							resolve();
+						} else {
+							reject();
+						}
+					}, function() {
+						reject();
+					});
+				} else {
+					reject();
+				}
+			}, function() {
+				reject();
+			})
+		});
 	}
-};
+}
