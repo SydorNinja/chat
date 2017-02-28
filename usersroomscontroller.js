@@ -129,11 +129,8 @@ module.exports = {
 								id: roomIdArray[i]
 							}
 						}).then(function(room) {
-							console.log('before: ' + roomTitleArray);
 							roomTitleArray.push(room.title);
-							console.log('after: ' + roomTitleArray);
 							if (i == roomIdArray.length) {
-								console.log('final: ' + roomTitleArray);
 								resolve(roomTitleArray);
 							}
 						});
@@ -185,6 +182,42 @@ module.exports = {
 			}, function() {
 				reject();
 			})
+		});
+	},
+	favoriteRooms: function(user){
+		return new Promise(function(resolve, reject) {
+			var id = user.id;
+			var roomIdArray = [];
+			var roomTitleArray = [];
+			db.UsersRooms.findAll({
+				where: {
+					userId: id,
+					favorite: true
+				}
+			}).then(function(connections) {
+				if (connections == 0) {
+					return resolve('no favorite rooms');
+				}
+				connections.forEach(function(connection) {
+					roomIdArray.push(connection.roomId);
+				});
+				for (var i = 0; i < roomIdArray.length; i++) {
+					if (i <= roomIdArray.length) {
+						db.room.findOne({
+							where: {
+								id: roomIdArray[i]
+							}
+						}).then(function(room) {
+							roomTitleArray.push(room.title);
+							if (i == roomIdArray.length) {
+								resolve(roomTitleArray);
+							}
+						});
+					}
+				}
+			}, function() {
+				reject();
+			});
 		});
 	}
 }

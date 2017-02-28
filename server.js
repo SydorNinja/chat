@@ -231,6 +231,14 @@ app.post('/connectViaInvite', middleware.requireAuthentication, function(req, re
 	});
 });
 
+app.get('/favoriteRooms', middleware.requireAuthentication, function(req, res) {
+	usersroomscontroller.favoriteRooms(req.user).then(function(rooms) {
+		res.send('My Favorite Rooms:' + rooms);
+	}, function() {
+		res.status(401).send();
+	});
+});
+
 db.sequelize.sync(
 	// {
 	// 	force: true

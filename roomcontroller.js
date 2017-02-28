@@ -113,7 +113,6 @@ module.exports = {
 			}, function() {
 				return reject();
 			}).then(function(rooms) {
-				console.log("roomsB" + rooms);
 				resolve(rooms);
 			}, function(e) {
 				reject();
@@ -128,7 +127,6 @@ module.exports = {
 					title: roomTitle
 				}
 			}).then(function(room) {
-				console.log('room');
 				if (room != null) {
 					db.UsersRooms.findOne({
 						where: {
@@ -143,7 +141,6 @@ module.exports = {
 							room.update(body);
 							resolve();
 						} else {
-							console.log('connection');
 							reject();
 						}
 					}, function() {
