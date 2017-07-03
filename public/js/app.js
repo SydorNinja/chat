@@ -1,16 +1,16 @@
-var name = getQueryVariable('name') || 'Anonymus';
-var room = getQueryVariable('room');
+var username = getQueryVariable('username');
+var password = getQueryVariable('password');
 var socket = io();
 
-console.log(name + ' wants to join ' + room);
+console.log(username + ' wants to join ');
 
 jQuery('.room-title').text(room);
 
 socket.on('connect', function() {
 	console.log('Connected to socket.io server!');
-	socket.emit('joinRoom', {
-		name: name,
-		room: room
+	socket.emit('signin', {
+		username: username,
+		password: password
 	});
 });
 
@@ -27,7 +27,6 @@ socket.on('message', function(message) {
 	$messages.append($message);
 });
 
-
 var $form = jQuery('#message-form');
 
 $form.on('submit', function(event) {
@@ -42,3 +41,4 @@ $form.on('submit', function(event) {
 
 	$message.val('');
 });
+

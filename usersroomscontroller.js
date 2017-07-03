@@ -1,5 +1,26 @@
 var _ = require('underscore');
 var db = require('./db.js');
+
+function idFinder(connections) {
+	var returnedArray = [];
+	for (var i = 0; i < connections.length; i++) {
+		returnedArray[i] = connections[i].userId;
+	}
+	return returnedArray;
+}
+
+function uFinder(idArray) {
+	var returnedArray = [];
+	for (var i = 0; i < idArray.length; i++) {
+		returnedArray[i] = db.user.findOne({
+			where: {
+				id: idArray[i]
+			}
+		});
+	}
+	return returnedArray;
+}
+
 module.exports = {
 	loginRoom: function(user, body) {
 		return new Promise(function(resolve, reject) {
@@ -62,7 +83,7 @@ module.exports = {
 				if (room === null) {
 					reject();
 				}
-				db.UsersRooms.findOne({
+				db.usersrooms.findOne({
 					where: {
 						roomId: room.get('id'),
 						userId: user.get('id')
@@ -80,7 +101,7 @@ module.exports = {
 							if (deleteUser === null) {
 								reject();
 							}
-							db.UsersRooms.findOne({
+							db.usersrooms.findOne({
 								where: {
 									roomId: room.get('id'),
 									userId: deleteUser.get('id')
@@ -114,11 +135,12 @@ module.exports = {
 			var id = user.id;
 			var roomIdArray = [];
 			var roomTitleArray = [];
-			db.UsersRooms.findAll({
+			db.usersrooms.findAll({
 				where: {
 					userId: id
 				}
 			}).then(function(connections) {
+				if (connections == null || connections === []) {resolve({error: 'no rooms'});}
 				connections.forEach(function(connection) {
 					roomIdArray.push(connection.roomId);
 				});
@@ -161,7 +183,7 @@ module.exports = {
 			}).then(function(room) {
 				if (room) {
 					roomId = room.id;
-					db.UsersRooms.findOne({
+					db.usersrooms.findOne({
 						where: {
 							userId: userId,
 							roomId: roomId
@@ -184,12 +206,12 @@ module.exports = {
 			})
 		});
 	},
-	favoriteRooms: function(user){
+	favoriteRooms: function(user) {
 		return new Promise(function(resolve, reject) {
 			var id = user.id;
 			var roomIdArray = [];
 			var roomTitleArray = [];
-			db.UsersRooms.findAll({
+			db.usersrooms.findAll({
 				where: {
 					userId: id,
 					favorite: true
@@ -215,6 +237,36 @@ module.exports = {
 						});
 					}
 				}
+			}, function() {
+				reject();
+			});
+		});
+	},
+	usersInRoom: function(roomTitle) {
+		return new Promise(function(resolve, reject) {
+			db.room.findOne({
+				where: {
+					title: roomTitle
+				}
+			}).then(function(room) {
+				if (room == null) {
+					reject();
+				}
+				db.usersrooms.findAll({
+					where: {
+						roomId: room.id
+					}
+				}).then(function(connections) {
+					if (connections == null || connections[0] == null) {
+						reject();
+					} else {
+						var ids = idFinder(connections)
+							resolve(uFinder(ids));
+						
+					}
+				}, function() {
+					reject();
+				});
 			}, function() {
 				reject();
 			});

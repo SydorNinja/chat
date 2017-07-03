@@ -1,10 +1,11 @@
 var cryptojs = require('crypto-js');
 var _ = require('underscore');
+var cookieParser = require('cookie-parser');
 
 module.exports = function(db) {
 	return {
 		requireAuthentication: function(req, res, next) {
-			var token = req.get('Auth');
+			var token = req.cookies.Auth;
 
 			db.token.findOne({
 				where: {
@@ -42,5 +43,5 @@ module.exports = function(db) {
 			});
 
 		}
-	};
+	}
 };

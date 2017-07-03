@@ -199,7 +199,7 @@ module.exports = {
 		return new Promise(function(resolve, reject) {
 			db.token.findAll({
 				where: {
-					userId: user.get('id')
+					userId: user.id
 				}
 			}).then(function(tokens) {
 				tokens.forEach(function(token) {

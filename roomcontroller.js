@@ -46,7 +46,7 @@ module.exports = {
 				}).then(function(room) {
 					if (room != null) {
 						var room = room;
-						db.UsersRooms.findOne({
+						db.usersrooms.findOne({
 							where: {
 								userId: user.get('id'),
 								roomId: room.get('id')
@@ -54,6 +54,15 @@ module.exports = {
 						}).then(function(connection) {
 							if (connection != null) {
 								if (connection.get('role') == true) {
+									db.conversation.findAll({
+										where: {
+											roomId: room.id
+										}
+									}).then(function(conversations) {
+										conversations.forEach(function(conversation) {
+											conversation.destroy();
+										});
+									});
 									room.destroy();
 									resolve();
 								} else {
@@ -128,7 +137,7 @@ module.exports = {
 				}
 			}).then(function(room) {
 				if (room != null) {
-					db.UsersRooms.findOne({
+					db.usersrooms.findOne({
 						where: {
 							userId: user.get('id'),
 							roomId: room.get('id')
