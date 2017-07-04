@@ -38,29 +38,17 @@ app.post('/signup', function(req, res) {
 });
 var Auth;
 
-app.post('/upload', upload.single('sampleFile'), function(req, res, next) {
+app.post('/upload', middleware.requireAuthentication, upload.single('sampleFile'), function(req, res, next) {
 	try {
 		console.log(req.file.path);
 		fs.readFile(req.file.path, function(err, data) {
 			var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
 			console.log(base64Image);
 			fs.unlink(req.file.path);
-			db.user.findOne({
-				where: {
-					id: 1
-				}
-			}).then(function(user) {
-				if (user != null) {
-					user.update({
-						photo: base64Image
-					});
-					res.status(200).send("uploaded");
-				} else {
-					throw new Error();
-				}
-			}, function(e) {
-				throw new Error();
-			});
+				req.user.update({
+					photo: base64Image
+				});
+				res.redirect('/myProfile.html');
 		});
 	} catch (e) {
 		res.status(401).send();
@@ -117,19 +105,10 @@ app.get('/publicRooms', function(req, res) {
 	});
 });
 
-
+//todo
 app.get('/users/:roomTitle', function(req, res) {
 	usersroomscontroller.usersInRoom(req.params.roomTitle).then(function(users) {
 		res.send(users);
-	}, function() {
-		res.status(400).send();
-	});
-});
-
-app.post('/changeUsername', middleware.requireAuthentication, function(req, res) {
-	var body = _.pick(req.body, 'newUsername');
-	usercontroller.changeUsername(req.user, body.newUsername).then(function(username) {
-		res.send("New username: " + username);
 	}, function() {
 		res.status(400).send();
 	});
@@ -173,10 +152,11 @@ app.get('/verify', function(req, res) {
 	});
 });
 
-app.put('/changePassword', middleware.requireAuthentication, function(req, res) {
-	var body = _.pick(req.body, "username", "password", "newPassword");
-	usercontroller.updatePassword(req.user, body).then(function() {
-		res.status(204).send();
+app.post('/changeDetails', middleware.requireAuthentication, function(req, res) {
+	console.log(req.body);
+	var body = _.pick(req.body, "username", "password");
+	usercontroller.changeDetails(req.user, body).then(function() {
+		res.redirect('/myProfile.html');
 	}, function() {
 		res.status(401).send();
 	});
@@ -240,9 +220,11 @@ app.delete('/userFromRoom', middleware.requireAuthentication, function(req, res)
 	});
 });
 
-app.delete('/signout', middleware.requireAuthentication, function(req, res) {
+
+//signout is truely delete
+app.get('/signout', middleware.requireAuthentication, function(req, res) {
 	usercontroller.signout(req.user).then(function() {
-		res.status(204).send();
+		res.status(204).clearCookie("key").redirect('/index.html');
 	}, function() {
 		res.status(401).send();
 	});
@@ -357,14 +339,22 @@ app.put('/message', middleware.requireAuthentication, function(req, res) {
 io.on('connection', function(socket) {
 	console.log('user connected via socket.io!');
 	console.log(socket.handshake.headers.cookie);
-	if (socket.handshake.headers.cookie.split(" ")[1]) {
-		var token = socket.handshake.headers.cookie.split(" ");
-		var token = token[1];
+	var token = socket.handshake.headers.cookie.split(" ");
+	if (token[1]) {
+		if (token[1].length > token[0].length) {
+			token = token[1];
+		} else {
+			token = token[0];
+			token = token.slice(0, token.length - 1);
+		}
 		token = token.slice(5, token.length);
+		console.log(token);
 		db.user.findByToken(token).then(function(user) {
 			socket.chatUser = user;
 		}, function() {});
-	}else{console.log('bug');}
+	} else {
+		console.log('bug');
+	}
 	socket.on('disconnect', function() {
 		usercontroller.signout(clientInfo.user);
 
@@ -379,19 +369,23 @@ io.on('connection', function(socket) {
 			delete clientInfo[socket.id];
 		}
 	});
-
-	socket.on('message', function(message) {
-		console.log('Message received: ' + message.text);
-		if (message.text == '@currentUsers') {
-			sendCurrentUsers(socket);
-		} else if (message.text.search('@private') != -1) {
-			console.log('private');
-			sendPrivate(message);
-		} else {
-			message.timestamp = moment().valueOf();
-			io.to(clientInfo[socket.id].room).emit('message', message);
-		}
+	socket.on('target', function(target) {
+		var user = socket.chatUser.toPublicJSON();
+		socket.emit('target', user);
 	});
+
+	/*	socket.on('message', function(message) {
+			console.log('Message received: ' + message.text);
+			if (message.text == '@currentUsers') {
+				sendCurrentUsers(socket);
+			} else if (message.text.search('@private') != -1) {
+				console.log('private');
+				sendPrivate(message);
+			} else {
+				message.timestamp = moment().valueOf();
+				io.to(clientInfo[socket.id].room).emit('message', message);
+			}
+		});*/
 
 	socket.emit('message', {
 		name: 'System',

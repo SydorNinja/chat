@@ -1,12 +1,18 @@
 var username = getQueryVariable('username');
 var password = getQueryVariable('password');
+var room = 'test';
 var socket = io();
 
 console.log(username + ' wants to join ');
-
+console.log(window.location);
 jQuery('.room-title').text(room);
 
 socket.on('connect', function() {
+	if (window.location.href == 'http://localhost:3000/myProfile.html') {
+		socket.emit('target', {
+			target: '200'
+		});
+	}
 	console.log('Connected to socket.io server!');
 	socket.emit('signin', {
 		username: username,
@@ -41,4 +47,20 @@ $form.on('submit', function(event) {
 
 	$message.val('');
 });
-
+socket.on('target', function(profile) {
+	var username = profile.username;
+	var email = profile.email;
+	var photo = profile.photo;
+	var signin = profile.signin;
+	var signup = profile.signup;
+	var $profile = jQuery('.profiles');
+	$profile.append('<p><strong> Username: ' + username +'</strong></p>');
+	$profile.append('<p><strong> Email: ' + email +'</strong></p>');
+	if (photo == null) {
+		$profile.append('<p><strong> No photo </strong></p>');
+	} else {
+		$profile.append('<p><strong> Photo: </strong></p>' + '<img src=' + photo + ' style= width:50px height:100px>');
+	}
+	$profile.append('<p><strong> Last sign in: ' + moment.utc(signin).local().format('h:mm a') +'</strong></p>');
+	$profile.append('<p><strong> Signed up: ' + moment.utc(signup).local().format('h:mm a')+'</strong></p>');
+});

@@ -63,28 +63,20 @@ module.exports = {
 			});
 		});
 	},
-	updatePassword: function(usertoUpdate, body) {
+	changeDetails: function(user, body) {
 		return new Promise(function(resolve, reject) {
-			var up = {
-				username: body.username,
-				password: body.password
-			};
-			if (body === null || body.username === null || body.password === null || body.newPassword === null) {
-				reject();
-			} else {
-				user.authenticate(up).then(function(user) {
-					var attributes = {};
-					attributes.username = body.username;
-					attributes.password = body.newPassword;
-					usertoUpdate.update(attributes).then(function() {
-						resolve()
-					}, function() {
-						reject()
-					});
-				}, function() {
-					reject();
-				});
+			var up = {};
+			if (body.username) {
+				up.username = body.username;
 			}
+			if (body.password.length > 6 && body.password.length < 101) {
+				up.password = body.password;
+			}
+			user.update(up).then(function() {
+				resolve();
+			}, function() {
+				reject();
+			});
 		});
 	},
 	signin: function(user) {
