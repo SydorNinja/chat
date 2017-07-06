@@ -12,3 +12,10 @@ h1 {
 .messages p {
 	margin: 6px 0;
 }
+
+select[multiple], select[size] {
+    height: 32.5px;
+    width: 310px;
+    text-align: center;
+  	text-align-last: center;
+}

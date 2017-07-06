@@ -24,17 +24,20 @@ function uFinder(idArray) {
 module.exports = {
 	loginRoom: function(user, body) {
 		return new Promise(function(resolve, reject) {
+			var searcher = {};
 			if (body === null || body.title === null) {
 				reject();
 			} else {
-				if (body.password != null) {
-					body.private = true;
+				searcher.title = body.title;
+				if (body.password != '') {
+					searcher.private = true;
+					searcher.password = body.password;
 				}
 				if (!_.isString(body.password) && body.private === true) {
 					reject();
 				}
 				db.room.findOne({
-					where: body
+					where: searcher
 				}).then(function(room) {
 					if (room === null) {
 						reject();
@@ -59,7 +62,7 @@ module.exports = {
 			}).then(function(room) {
 				if (room != null) {
 					user.addRoom(room, {
-						role: 1
+						role: 0
 					});
 					resolve();
 				} else {
@@ -133,31 +136,31 @@ module.exports = {
 	rooms: function(user) {
 		return new Promise(function(resolve, reject) {
 			var id = user.id;
-			var roomIdArray = [];
 			var roomTitleArray = [];
+			var i = 0;
 			db.usersrooms.findAll({
 				where: {
 					userId: id
 				}
 			}).then(function(connections) {
-				if (connections == null || connections === []) {resolve({error: 'no rooms'});}
-				connections.forEach(function(connection) {
-					roomIdArray.push(connection.roomId);
-				});
-				for (var i = 0; i < roomIdArray.length; i++) {
-					if (i <= roomIdArray.length) {
-						db.room.findOne({
-							where: {
-								id: roomIdArray[i]
-							}
-						}).then(function(room) {
-							roomTitleArray.push(room.title);
-							if (i == roomIdArray.length) {
-								resolve(roomTitleArray);
-							}
-						});
-					}
+				if (connections == 0 || connections === []) {
+					console.log('no Rooms');
+					return resolve(false);
 				}
+				connections.forEach(function(connection) {
+					var roomId = connection.roomId;
+					db.room.findOne({
+						where: {
+							id: roomId
+						}
+					}).then(function(room){
+						roomTitleArray[i] = room.title;
+						i++;
+						if (i == connections.length) {
+							resolve(roomTitleArray);
+						}
+					});
+				});
 			}, function() {
 				reject();
 			});
@@ -217,7 +220,7 @@ module.exports = {
 					favorite: true
 				}
 			}).then(function(connections) {
-				if (connections == 0) {
+				if (connections == 0 || connections === []) {
 					return resolve('no favorite rooms');
 				}
 				connections.forEach(function(connection) {
@@ -261,8 +264,8 @@ module.exports = {
 						reject();
 					} else {
 						var ids = idFinder(connections)
-							resolve(uFinder(ids));
-						
+						resolve(uFinder(ids));
+
 					}
 				}, function() {
 					reject();

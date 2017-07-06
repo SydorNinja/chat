@@ -21,8 +21,10 @@
 								<div class="input-group">
 									<span class="input-group-addon">
 										<i class="glyphicon glyphicon-user"></i>
-									</span>
-									<input type="text" name="room" class="form-control"/>
+									</span>		
+										<select name="room" class="selectClass" size="1" ;>
+										</select>
+									
 								</div>
 							</div>
 
@@ -30,21 +32,51 @@
 								<input type="submit" value="See messages" class="btn btn-primary btn-block" />
 							</div>
 						</form>
+						<form id="title-form" action="/roomDetailes.html">
+							<div class="form-group">			
+								<label>Title</label>
+								<div class="input-group">
+									<span class="input-group-addon">
+										<i class="glyphicon glyphicon-user"></i>
+									</span>
+									<input type="text" name="title" class="form-control"/>
+								</div>
+							</div>
+
+							<div>
+								<input type="submit" value="Search for Room" class="btn btn-primary btn-block" />
+							</div>
+						</form>
+
 						<br>
 						<div>
-						<a href="/myRooms" class="btn btn-primary btn-block">My Rooms</a>
+						<a href="/myRooms.html" class="btn btn-primary btn-block">My Rooms</a>
 						</div>
 						<br>
 						<div>
-						<a href="signout" class="btn btn-primary btn-block">Sign out</a>
+						<a href="/signout" class="btn btn-primary btn-block">Sign out</a>
 						</div>
 						<br>
 						<div>
 						<a href="/myProfile.html" class="btn btn-primary btn-block">My Profile</a>
 						</div>
+						<br>
+						<div>
+						<a href="/roomLogin.html" class="btn btn-primary btn-block">Login Into Room</a>
+						</div>
+						<br>
+						<div>
+						<a href="/createRoom.html" class="btn btn-primary btn-block">Create Room</a>
+						</div>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<script src="/js/jquery-3.1.1.min.js"></script>
+		<script src="/js/socket.io-1.4.8.js"></script>
+		<script src="/js/moment.js"></script>
+		<script src="/js/QueryParams.js"></script>
+		<script src="/js/app.js"></script>
 	</body>
 </html>

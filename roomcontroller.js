@@ -4,30 +4,28 @@ var _ = require('underscore');
 module.exports = {
 	makeRoom: function(user, body) {
 		return new Promise(function(resolve, reject) {
-			try {
-				if (body != null && body.title != null) {
-					if (body.private === true) {
-						if (_.isString(body.password)) {
-							body.invite = +invite(body.password);
-						} else {
-							reject();
-						}
-					} else {
-						body.invite = invite(body.title);
-					}
-					db.room.create(body).then(function(room) {
-						user.addRoom(room, {
-							role: 1
-						});
-						var publicFormRoom = _.pick(room, 'private', 'title');
-						resolve(publicFormRoom);
-					}, function() {
-						reject();
-					});
+			var creator = {};
+			if (body != null && body.title != null) {
+				creator.title = body.title;
+				if (body.password.trim().length > 0) {
+					creator.invite = invite(body.password);
+					creator.password = body.password;
+					creator.private = true;
+					console.log(creator);
 				} else {
-					reject();
+					creator.invite = invite(body.title);
+					console.log(creator);
 				}
-			} catch (e) {
+				db.room.create(creator).then(function(room) {
+					user.addRoom(room, {
+						role: 1
+					});
+					var publicFormRoom = _.pick(room, 'private', 'title');
+					resolve(publicFormRoom);
+				}, function() {
+					reject();
+				});
+			} else {
 				reject();
 			}
 		});
@@ -85,7 +83,7 @@ module.exports = {
 			}
 		});
 	},
-	findRoomByTitle: function(title) {
+	findRoomByTitle: function(title, user) {
 		return new Promise(function(resolve, reject) {
 			db.room.findOne({
 				where: {
@@ -93,11 +91,29 @@ module.exports = {
 				}
 			}).then(function(room) {
 				if (room != null) {
-					var publicFormRoom = _.pick(room, 'private', 'title');
+					var publicFormRoom = _.pick(room, 'private', 'title', 'icon');
 					if (room.private == false) {
 						publicFormRoom.invite = room.invite;
+						resolve(publicFormRoom);
+					} else {
+						if (user != undefined) {
+							db.usersrooms.findOne({
+								where: {
+									userId: user.id,
+									roomId: room.id
+								}
+							}).then(function(connection) {
+								if (connection == null) {
+									resolve(publicFormRoom);
+								} else {
+									publicFormRoom.invite = room.invite;
+									resolve(publicFormRoom);
+								}
+							});
+						}else{resolve(publicFormRoom);}
+
 					}
-					resolve(publicFormRoom);
+
 				} else {
 					reject();
 				}
@@ -139,12 +155,12 @@ module.exports = {
 				if (room != null) {
 					db.usersrooms.findOne({
 						where: {
-							userId: user.get('id'),
-							roomId: room.get('id')
+							userId: user.id,
+							roomId: room.id
 						}
 					}).then(function(connection) {
 						if (connection != null) {
-							if (connection.get('role') != 1) {
+							if (connection.role != 1) {
 								body = _.pick(body, 'icon');
 							}
 							room.update(body);

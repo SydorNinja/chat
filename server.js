@@ -45,10 +45,10 @@ app.post('/upload', middleware.requireAuthentication, upload.single('sampleFile'
 			var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
 			console.log(base64Image);
 			fs.unlink(req.file.path);
-				req.user.update({
-					photo: base64Image
-				});
-				res.redirect('/myProfile.html');
+			req.user.update({
+				photo: base64Image
+			});
+			res.redirect('/myProfile.html');
 		});
 	} catch (e) {
 		res.status(401).send();
@@ -115,27 +115,49 @@ app.get('/users/:roomTitle', function(req, res) {
 });
 
 app.post('/room', middleware.requireAuthentication, function(req, res) {
-	var body = _.pick(req.body, 'private', 'title', 'password');
+	var body = _.pick(req.body, 'title', 'password');
 	roomcontroller.makeRoom(req.user, body).then(function(publicFormRoom) {
-		res.json(publicFormRoom);
+		res.redirect('/landing.html');
 	}, function() {
 		res.status(401).send();
 	});
 
 });
 
-app.put('/changeRoomDetails/:roomTitle', middleware.requireAuthentication, function(req, res) {
-	var roomTitle = req.params.roomTitle;
+app.post('/changeRoomDetails', middleware.requireAuthentication, function(req, res) {
+	var roomTitle = req.headers.referer.slice(52);
 	var body = req.body;
 	roomcontroller.changeRoomDetails(body, roomTitle, req.user).then(function() {
-		res.status(204).send();
+		res.redirect('/roomDetailes.html?title=' + roomTitle);
 	}, function() {
 		res.status(401).send();
 	});
 });
+
+app.post('/upload2', middleware.requireAuthentication, upload.single('sampleFile'), function(req, res, next) {
+	var roomTitle = req.headers.referer.slice(52);
+	try {
+		var body = {};
+		fs.readFile(req.file.path, function(err, data) {
+			var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
+			fs.unlink(req.file.path);
+			body.icon = base64Image;
+			roomcontroller.changeRoomDetails(body, roomTitle, req.user).then(function() {
+				res.redirect('/roomDetailes.html?title=' + roomTitle);
+			}, function() {
+				res.status(401).send();
+			});
+			
+		});
+	} catch (e) {
+		res.status(401).send();
+	}
+});
+
 
 app.post('/loginRoom', middleware.requireAuthentication, function(req, res) {
 	var body = req.body;
+	console.log(body);
 	usersroomscontroller.loginRoom(req.user, body).then(function() {
 		res.status(204).send();
 	}, function() {
@@ -162,8 +184,8 @@ app.post('/changeDetails', middleware.requireAuthentication, function(req, res) 
 	});
 });
 
-app.get('/room/:title', function(req, res) {
-	var title = req.params.title;
+app.post('/room/search', function(req, res) {
+	var title = req.body.title;
 	roomcontroller.findRoomByTitle(title).then(function(publicFormRoom) {
 		res.json(publicFormRoom);
 	}, function() {
@@ -337,8 +359,6 @@ app.put('/message', middleware.requireAuthentication, function(req, res) {
 });
 
 io.on('connection', function(socket) {
-	console.log('user connected via socket.io!');
-	console.log(socket.handshake.headers.cookie);
 	var token = socket.handshake.headers.cookie.split(" ");
 	if (token[1]) {
 		if (token[1].length > token[0].length) {
@@ -348,12 +368,9 @@ io.on('connection', function(socket) {
 			token = token.slice(0, token.length - 1);
 		}
 		token = token.slice(5, token.length);
-		console.log(token);
 		db.user.findByToken(token).then(function(user) {
 			socket.chatUser = user;
 		}, function() {});
-	} else {
-		console.log('bug');
 	}
 	socket.on('disconnect', function() {
 		usercontroller.signout(clientInfo.user);
@@ -372,6 +389,22 @@ io.on('connection', function(socket) {
 	socket.on('target', function(target) {
 		var user = socket.chatUser.toPublicJSON();
 		socket.emit('target', user);
+	});
+
+	socket.on('target2', function(target) {
+		usersroomscontroller.rooms(socket.chatUser).then(function(rooms) {
+			socket.emit('target2', rooms);
+		});
+	});
+
+	socket.on('target3', function(target) {
+		console.log(2002);
+		roomcontroller.findRoomByTitle(target.title, socket.chatUser).then(function(room) {
+			socket.emit('target3', room);
+		}, function() {
+			socket.emit('target3', null);
+		});
+
 	});
 
 	/*	socket.on('message', function(message) {
