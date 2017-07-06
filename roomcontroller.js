@@ -94,7 +94,23 @@ module.exports = {
 					var publicFormRoom = _.pick(room, 'private', 'title', 'icon');
 					if (room.private == false) {
 						publicFormRoom.invite = room.invite;
-						resolve(publicFormRoom);
+						if (user != undefined) {
+							db.usersrooms.findOne({
+								where: {
+									userId: user.id,
+									roomId: room.id
+								}
+							}).then(function(connection) {
+								if (connection == null) {
+									resolve(publicFormRoom);
+								} else {
+									publicFormRoom.InRoom = true;
+									resolve(publicFormRoom);
+								}
+							});
+						} else {
+							resolve(publicFormRoom);
+						}
 					} else {
 						if (user != undefined) {
 							db.usersrooms.findOne({
@@ -107,10 +123,13 @@ module.exports = {
 									resolve(publicFormRoom);
 								} else {
 									publicFormRoom.invite = room.invite;
+									publicFormRoom.InRoom = true;
 									resolve(publicFormRoom);
 								}
 							});
-						}else{resolve(publicFormRoom);}
+						} else {
+							resolve(publicFormRoom);
+						}
 
 					}
 
@@ -161,9 +180,23 @@ module.exports = {
 					}).then(function(connection) {
 						if (connection != null) {
 							if (connection.role != 1) {
-								body = _.pick(body, 'icon');
+
+							} else {
+								if (body.password == '' && body.title != '') {
+									body = _.pick(body, 'title');
+									room.update(body);
+								} else if (body.title == '' && body.password != '') {
+									body = _.pick(body, 'password');
+									body.private = true;
+									room.update(body);
+								} else if (_.isString(body.icon)) {
+									body = _.pick(body, 'icon');
+									room.update(body);
+								} else if (body.password != '' && body.title != '') {
+									room.update(body);
+								}
 							}
-							room.update(body);
+
 							resolve();
 						} else {
 							reject();

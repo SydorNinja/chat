@@ -90,8 +90,9 @@ socket.on('target2', function(rooms) {
 	if (window.location.href == 'http://localhost:3000/landing.html') {
 		var $el = $('.selectClass');
 		$el.empty();
-		rooms.forEach(function(room){
-    		$el.append("<option style=\"width: 310px\" value="+ room +">"+ room +"</option>");});
+		rooms.forEach(function(room) {
+			$el.append("<option style=\"width: 310px\" value=" + room + ">" + room + "</option>");
+		});
 
 	} else {
 		console.log(rooms + ' ' + typeof(rooms));
@@ -111,15 +112,21 @@ socket.on('target2', function(rooms) {
 });
 
 socket.on('target3', function(room) {
-	var $roomDetailes = jQuery('#roomDetailes');
+	var $roomDetailes = jQuery('.roomDetailes');
+
 
 	if (room == null) {
 		$roomDetailes.append('<h1>No Room Found</h1>');
 		$("a[href='/roomDetailesChange.html']").attr('href', 'http://localhost:3000/landing.html');
 
 	} else {
-		var dest = 'roomDetailesChange.html?title=' + room.title;
-		$("a[href='/roomDetailesChange.html']").attr('href', dest);
+		console.log(room);
+		if (room.InRoom == undefined) {
+			$("a[href='/roomDetailesChange.html']").remove();
+		} else {
+			var dest = 'roomDetailesChange.html?title=' + room.title;
+			$("a[href='/roomDetailesChange.html']").attr('href', dest);
+		}
 		if (room.icon == null) {
 			$roomDetailes.append('<p><strong> No Photo </strong></p>');
 		} else {
@@ -135,6 +142,8 @@ socket.on('target3', function(room) {
 		if (room.invite) {
 			$roomDetailes.append('<p><strong> Invite Code: ' + room.invite + ' </strong></p>');
 		}
+
+
 
 	}
 });

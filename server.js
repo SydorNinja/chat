@@ -128,7 +128,11 @@ app.post('/changeRoomDetails', middleware.requireAuthentication, function(req, r
 	var roomTitle = req.headers.referer.slice(52);
 	var body = req.body;
 	roomcontroller.changeRoomDetails(body, roomTitle, req.user).then(function() {
-		res.redirect('/roomDetailes.html?title=' + roomTitle);
+		if (body.title != '' && body.title != undefined) {
+			res.redirect('/roomDetailes.html?title=' + body.title);
+		} else {
+			res.redirect('/roomDetailes.html?title=' + roomTitle);
+		}
 	}, function() {
 		res.status(401).send();
 	});
@@ -147,7 +151,7 @@ app.post('/upload2', middleware.requireAuthentication, upload.single('sampleFile
 			}, function() {
 				res.status(401).send();
 			});
-			
+
 		});
 	} catch (e) {
 		res.status(401).send();
