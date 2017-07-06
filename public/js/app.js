@@ -9,21 +9,31 @@ jQuery('.room-title').text(room);
 
 socket.on('connect', function() {
 	if (window.location.href == 'http://localhost:3000/myProfile.html') {
+		
 		socket.emit('target', {
 			target: '200'
 		});
 	}
 	if (window.location.href == 'http://localhost:3000/myRooms.html') {
+		
 		socket.emit('target2', {
 			target: '200'
 		});
 	}
+	if (window.location.href == 'http://localhost:3000/favorite.html') {
+		console.log(1);
+		socket.emit('target4', {
+			target: '200'
+		});
+	}
 	if (window.location.href == 'http://localhost:3000/landing.html') {
+		
 		socket.emit('target2', {
 			target: '200'
 		});
 	}
 	if (window.location.host == 'localhost:3000' && window.location.pathname == '/roomDetailes.html') {
+		
 		console.log(window.location.search.slice(7));
 		socket.emit('target3', {
 			title: window.location.search.slice(7)
@@ -31,6 +41,7 @@ socket.on('connect', function() {
 	}
 
 	if (window.location.host == 'localhost:3000' && window.location.pathname == '/roomDetailesChange.html') {
+		
 		var dest = 'http://localhost:3000/roomDetailesChange?title=' + window.location.search.slice(7);
 		$("form[action='/roomDetailesChange']").attr('action', dest);
 	}
@@ -69,6 +80,7 @@ $form.on('submit', function(event) {
 	$message.val('');
 });
 socket.on('target', function(profile) {
+	
 	var username = profile.username;
 	var email = profile.email;
 	var photo = profile.photo;
@@ -87,6 +99,7 @@ socket.on('target', function(profile) {
 });
 
 socket.on('target2', function(rooms) {
+	
 	if (window.location.href == 'http://localhost:3000/landing.html') {
 		var $el = $('.selectClass');
 		$el.empty();
@@ -111,7 +124,27 @@ socket.on('target2', function(rooms) {
 	}
 });
 
+
+
+socket.on('target4', function(rooms) {
+	var $myRooms = jQuery('.myfavorite');
+	if (rooms === false) {
+		$myRooms.append('<h1>No Favorite Rooms</h1>');
+	} else {
+
+		console.log(rooms);
+
+		$myRooms.append('<h1> My Favorite Rooms: </h1>');
+		rooms.forEach(function(room) {
+			$myRooms.append('<p><strong>' + room + '</strong></p> ');
+		});
+	}
+});
+
+
+
 socket.on('target3', function(room) {
+	
 	var $roomDetailes = jQuery('.roomDetailes');
 
 

@@ -401,6 +401,13 @@ io.on('connection', function(socket) {
 		});
 	});
 
+		socket.on('target4', function(target) {
+			console.log('in');
+		usersroomscontroller.favoriteRooms(socket.chatUser).then(function(rooms) {
+			socket.emit('target4', rooms);
+		});
+	});
+
 	socket.on('target3', function(target) {
 		console.log(2002);
 		roomcontroller.findRoomByTitle(target.title, socket.chatUser).then(function(room) {

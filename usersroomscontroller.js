@@ -153,7 +153,7 @@ module.exports = {
 						where: {
 							id: roomId
 						}
-					}).then(function(room){
+					}).then(function(room) {
 						roomTitleArray[i] = room.title;
 						i++;
 						if (i == connections.length) {
@@ -212,8 +212,8 @@ module.exports = {
 	favoriteRooms: function(user) {
 		return new Promise(function(resolve, reject) {
 			var id = user.id;
-			var roomIdArray = [];
 			var roomTitleArray = [];
+			var i = 0;
 			db.usersrooms.findAll({
 				where: {
 					userId: id,
@@ -221,25 +221,23 @@ module.exports = {
 				}
 			}).then(function(connections) {
 				if (connections == 0 || connections === []) {
-					return resolve('no favorite rooms');
+					console.log('no Rooms');
+					return resolve(false);
 				}
 				connections.forEach(function(connection) {
-					roomIdArray.push(connection.roomId);
+					var roomId = connection.roomId;
+					db.room.findOne({
+						where: {
+							id: roomId
+						}
+					}).then(function(room) {
+						roomTitleArray[i] = room.title;
+						i++;
+						if (i == connections.length) {
+							resolve(roomTitleArray);
+						}
+					});
 				});
-				for (var i = 0; i < roomIdArray.length; i++) {
-					if (i <= roomIdArray.length) {
-						db.room.findOne({
-							where: {
-								id: roomIdArray[i]
-							}
-						}).then(function(room) {
-							roomTitleArray.push(room.title);
-							if (i == roomIdArray.length) {
-								resolve(roomTitleArray);
-							}
-						});
-					}
-				}
 			}, function() {
 				reject();
 			});
