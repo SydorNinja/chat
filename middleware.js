@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 module.exports = function(db) {
 	return {
 		requireAuthentication: function(req, res, next) {
+			console.log(req.cookies.Auth);
 			var token = req.cookies.Auth;
 
 			db.token.findOne({

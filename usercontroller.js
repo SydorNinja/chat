@@ -101,6 +101,7 @@ module.exports = {
 		});
 	},
 	getPassword: function(query) {
+		return new Promise(function(resolve, reject){
 		if (!query.hasOwnProperty('ph')) {
 			reject();
 		} else {
@@ -119,9 +120,10 @@ module.exports = {
 					resolve(password);
 				}
 			}, function() {
-				res.status(401).send();
+				reject();
 			});
 		}
+		});
 	},
 	signup: function(body) {
 		return new Promise(function(resolve, reject) {
@@ -137,7 +139,7 @@ module.exports = {
 			}
 			db.user.create(body).then(function(user) {
 				client.sendEmail({
-					"From": "denyss@perfectomobile.com",
+					"From": "denys@pomvom.com",
 					"To": "" + body.email + "",
 					"Subject": "Your new Todo account",
 					"TextBody": "enter the link: http://localhost:3000/verify?vh=" + user.validHash + ""
@@ -169,7 +171,7 @@ module.exports = {
 						reject();
 					} else {
 						client.sendEmail({
-							"From": "denyss@perfectomobile.com",
+							"From": "denys@pomvom.com",
 							"To": "" + body.email + "",
 							"Subject": "Restart your password",
 							"TextBody": "enter the link: localhost:3000/getPassword?ph=" + user.password_hash + ""
@@ -178,6 +180,9 @@ module.exports = {
 								reject();
 							} else {
 								resolve();
+							}
+							if (success) {
+								console.log(success);
 							}
 						});
 					}

@@ -1,7 +1,16 @@
 var username = getQueryVariable('username');
 var password = getQueryVariable('password');
-var room = 'test';
+if (window.location.host == 'localhost:3000' && window.location.pathname == '/chat.html') {
+	var room = window.location.search.slice(6);
+	console.log(window.location.search);
+}
 var socket = io();
+if (window.location.host == 'localhost:3000' && window.location.pathname == '/chat.html') {
+
+	var instance = new SocketIOFileUpload(socket);
+	instance.listenOnSubmit(document.getElementById("submitb"), document.getElementById("siofu_input"));
+}
+
 
 console.log(username + ' wants to join ');
 console.log(window.location);
@@ -9,14 +18,8 @@ jQuery('.room-title').text(room);
 
 socket.on('connect', function() {
 	if (window.location.href == 'http://localhost:3000/myProfile.html') {
-		
+
 		socket.emit('target', {
-			target: '200'
-		});
-	}
-	if (window.location.href == 'http://localhost:3000/myRooms.html') {
-		
-		socket.emit('target2', {
 			target: '200'
 		});
 	}
@@ -26,61 +29,120 @@ socket.on('connect', function() {
 			target: '200'
 		});
 	}
-	if (window.location.href == 'http://localhost:3000/landing.html') {
-		
+	if (window.location.href == 'http://localhost:3000/landing.html' || window.location.href == 'http://localhost:3000/favorite.html' || window.location.href == 'http://localhost:3000/myRooms.html') {
+
 		socket.emit('target2', {
 			target: '200'
 		});
 	}
 	if (window.location.host == 'localhost:3000' && window.location.pathname == '/roomDetailes.html') {
-		
-		console.log(window.location.search.slice(7));
+
 		socket.emit('target3', {
 			title: window.location.search.slice(7)
 		});
 	}
 
+	if (window.location.host == 'localhost:3000' && window.location.pathname == '/chat.html') {
+
+		console.log(window.location.search.slice(6));
+		socket.emit('target3', {
+			mission: 'message',
+			title: window.location.search.slice(6)
+		});
+
+		socket.emit('joinRoom', {
+			room: room
+		});
+	}
+
 	if (window.location.host == 'localhost:3000' && window.location.pathname == '/roomDetailesChange.html') {
-		
+
 		var dest = 'http://localhost:3000/roomDetailesChange?title=' + window.location.search.slice(7);
 		$("form[action='/roomDetailesChange']").attr('action', dest);
 	}
 
+	if (window.location.href == 'http://localhost:3000/publicRooms.html') {
+		socket.emit('target2', {
+			target: 'public'
+		});
+	}
+
 	console.log('Connected to socket.io server!');
-	socket.emit('signin', {
-		username: username,
-		password: password
-	});
 });
 
-socket.on('message', function(message) {
-	var timestampMoment = moment.utc(message.timestamp);
+socket.on('messages', function(result) {
+	console.log(result);
+	var messages = result.result;
 	var $messages = jQuery('.messages');
-	var $message = jQuery('<li class="list-group-item"></li>');
+	$messages.empty();
+	console.log(messages);
+	if (result.message === "no messages") {
+		console.log("sorry");
+		$messages.append('<p><h1>No Messages</strong></p>');
+	} else {
+		messages.forEach(function(message) {
+			console.log(message);
+			var timestampMoment = moment.utc(message.time);
 
-	console.log('New message:');
-	console.log(message.text);
+			var $message = jQuery('<li class="list-group-item"></li>');
 
-	$message.append('<p><strong>' + message.name + ' ' + timestampMoment.local().format('h:mm a') + '</strong></p>');
-	$message.append('<p>' + message.text + '<p>');
-	$messages.append($message);
+			console.log('New message:');
+			console.log(message.text + ' photo ' + message.photo);
+			$message.append('<p><strong>' + message.sender + ' ' + timestampMoment.local().format('h:mm a') + '</strong></p>');
+			if (message.photo) {
+				$message.append('<p><strong> </strong></p>' + '<img src=' + message.photo + ' style= width:50px height:100px>');
+			}
+			if (message.text) {
+				$message.append('<p>' + message.text + '<p>');
+			}
+
+			$messages.append($message);
+		});
+		console.log(result);
+		if (result.role != 1) {
+			console.log("no admin");
+			$rowClear = jQuery('#row-admin');
+			$rowClear.remove();
+		}else{console.log("admin");}
+	}
+
 });
 
 var $form = jQuery('#message-form');
 $form.on('submit', function(event) {
 	event.preventDefault();
+	var message = {};
+	$photo = $form.find('input[name=photo]');
+	if ($photo.val().length > 0) {
+		console.log("abcd");
+		message.photo = $photo.val().split('\\')[2];
+	}
+	$text = $form.find('input[name=message]').val().trim();
+	$TTL = $form.find('select[name=TTL]');
 
-	$message = $form.find('input[name=message]');
-
-	socket.emit('message', {
-		name: name,
-		text: $message.val()
-	});
-
-	$message.val('');
+	if ($TTL.val() == "true") {
+		message.TTL = true;
+	}
+	if ($text.length > 0) {
+		message.text = $text;
+	}
+	console.log(message);
+	if (message != {}) {
+		socket.emit('message', message);
+	}
+	$("#siofu_input").val("");
+	$("#abc").val("");
 });
+
+
+$('#clearAdmin').click(function(event) {
+	socket.emit('clear', {});
+});
+
+
+
 socket.on('target', function(profile) {
-	
+
 	var username = profile.username;
 	var email = profile.email;
 	var photo = profile.photo;
@@ -97,16 +159,53 @@ socket.on('target', function(profile) {
 	$profile.append('<p><strong> Last sign in: ' + moment.utc(signin).local().format('h:mm a') + '</strong></p>');
 	$profile.append('<p><strong> Signed up: ' + moment.utc(signup).local().format('h:mm a') + '</strong></p>');
 });
+socket.on('message', function(message) {
+	var timestampMoment = moment.utc(message.timestamp);
+	var $messages = jQuery('.messages');
+	var $message = jQuery('<li class="list-group-item"></li>');
 
+	console.log('New message:');
+	console.log(message.text);
+
+	$message.append('<p><strong>' + message.sender + ' ' + timestampMoment.local().format('h:mm a') + '</strong></p>');
+	if (message.photo) {
+		$message.append('<p><strong> </strong></p>' + '<img src=' + message.photo + ' style= width:50px height:100px>');
+	}
+	if (message.text) {
+		$message.append('<p>' + message.text + '<p>');
+	}
+	$messages.append($message);
+});
 socket.on('target2', function(rooms) {
-	
-	if (window.location.href == 'http://localhost:3000/landing.html') {
+
+	if (window.location.href == 'http://localhost:3000/landing.html' || window.location.href == 'http://localhost:3000/favorite.html') {
 		var $el = $('.selectClass');
 		$el.empty();
 		rooms.forEach(function(room) {
 			$el.append("<option style=\"width: 310px\" value=" + room + ">" + room + "</option>");
 		});
 
+	} else if (window.location.href == 'http://localhost:3000/publicRooms.html') {
+		console.log("dfsdfsd");
+		var $publicRooms = jQuery('.publicRooms');
+		if (rooms === false) {
+			$publicRooms.append('<h1>No Rooms</h1>');
+		} else {
+
+			console.log(rooms);
+
+			$publicRooms.append('<h1> My Rooms </h1>');
+			rooms.forEach(function(room) {
+				$publicRooms.append('<p><strong> Title:' + room.title + '</strong></p> ');
+				$publicRooms.append('<p><strong> Invite:' + room.invite + '</strong></p> ');
+				if (room.icon == null) {
+					$publicRooms.append('<p><strong> No Photo </strong></p>');
+				} else {
+					$publicRooms.append('<p><strong>Icon: </strong></p><img src=' + room.icon + ' style=width:50px height:100px>');
+				}
+				$publicRooms.append('<form action="/connectViaInvite" method="post"><input type="hidden" value=' + room.invite + ' class="invite" name="invite"><br><br><input type="submit" value="Login" class="btn btn-primary btn-block" ></form>');
+			});
+		}
 	} else {
 		console.log(rooms + ' ' + typeof(rooms));
 		var $myRooms = jQuery('.myRooms');
@@ -124,7 +223,12 @@ socket.on('target2', function(rooms) {
 	}
 });
 
-
+socket.on('requireM', function() {
+	socket.emit('target3', {
+		mission: 'message',
+		title: window.location.search.slice(6)
+	});
+});
 
 socket.on('target4', function(rooms) {
 	var $myRooms = jQuery('.myfavorite');
@@ -144,7 +248,7 @@ socket.on('target4', function(rooms) {
 
 
 socket.on('target3', function(room) {
-	
+
 	var $roomDetailes = jQuery('.roomDetailes');
 
 

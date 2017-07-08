@@ -20,11 +20,6 @@ module.exports = function(sequelize, DataTypes) {
 			type: DataTypes.STRING,
 			allowNull: false
 		},
-		mType: {
-			type: DataTypes.STRING,
-			defaultValue: false,
-			allowNull: false,
-		},
 		TTL: {
 			type: DataTypes.INTEGER
 		},
@@ -35,13 +30,7 @@ module.exports = function(sequelize, DataTypes) {
 	}, {
 		instanceMethods: {
 			toPublic: function() {
-				var data;
-				if (this.photo) {
-					data = 'photo';
-				} else {
-					data = 'text'
-				}
-				return _.pick(this, 'sender', 'time', data);
+				return _.pick(this, 'sender', 'time', 'photo', 'text');
 			},
 			toPublicJSON: function() {
 				var data;

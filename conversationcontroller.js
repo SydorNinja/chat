@@ -34,18 +34,35 @@ function daysCalc(messages, days) {
 
 module.exports = {
 	upload: function(message) {
+		return new Promise(function(resolve, reject) {
+			db.usersrooms.findOne({
+				where: {
+					roomId: message.roomId,
+					userId: message.userId
+				}
+			}).then(function(connection) {
+				if (connection != null) {
+					db.conversation.create(message).then(function(messageCreated) {
+						if (message.TTL === true) {
+							setTimeout(function() {
+								messageCreated.destroy();
+								resolve();
+							}, 30000);
 
-		db.conversation.create(message).then(function(messageCreated) {
-			if (message.TTL === true) {
-				setTimeout(function() {
-					messageCreated.destroy();
-				}, 30000);
-			}
+						} else {
+							resolve();
+						}
+
+					});
+				} else {
+					reject();
+				}
+			});
 
 		});
 
 	},
-	seeMessages: function(title) {
+	seeMessages: function(title, user) {
 		return new Promise(function(resolve, reject) {
 			var messages = [];
 			db.room.findOne({
@@ -70,7 +87,32 @@ module.exports = {
 					}
 
 				}).then(function() {
-					resolve(result);
+					db.usersrooms.findOne({
+						where: {
+							userId: user.id,
+							roomId: room.id
+						}
+					}).then(function(connection) {
+							if (connection == null) {
+								reject();
+							} else {
+								if (connection.role == 1) {
+									var admin = {
+										role: 1,
+										result: result
+									}
+									resolve(admin);
+								} else {
+									var regular = {result: result};
+									resolve(regular);
+								}
+
+							}
+						},
+
+						function() {
+							reject();
+						});
 				});
 			});
 		});
@@ -102,7 +144,22 @@ module.exports = {
 						}
 
 					}).then(function() {
-						resolve(result);
+						db.usersrooms.findOne({
+							where: {
+								userId: user.id,
+								roomId: room.id
+							}
+						}).then(function(connection) {
+								if (connection == null) {
+									reject();
+								} else {
+									resolve(result);
+								}
+							},
+
+							function() {
+								reject();
+							});
 					});
 				});
 			} else {
@@ -272,7 +329,22 @@ module.exports = {
 					}
 
 				}).then(function() {
-					resolve(result);
+					db.usersrooms.findOne({
+						where: {
+							userId: user.id,
+							roomId: room.id
+						}
+					}).then(function(connection) {
+							if (connection == null) {
+								reject();
+							} else {
+								resolve(result);
+							}
+						},
+
+						function() {
+							reject();
+						});
 				});
 			});
 		});

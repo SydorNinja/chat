@@ -150,7 +150,7 @@ module.exports = {
 			}).then(function(rooms) {
 				var publicFormRooms = [];
 				rooms.forEach(function(room) {
-					room = _.pick(room, 'title', 'invite');
+					room = _.pick(room, 'title', 'invite', 'icon');
 					publicFormRooms.push(room);
 				});
 				return publicFormRooms;
