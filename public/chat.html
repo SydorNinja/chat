@@ -22,7 +22,12 @@
     <div class="container">
         <div class="row" id="row-admin">
             <div class="col-md-2 col-md-offset-7 well">
-                    <button type="button" id="clearAdmin" class="btn btn-danger btn-block">Clear Conversation</button>
+                <button type="button" id="clearAdmin" class="btn btn-danger btn-block">Clear Conversation</button>
+                <button type="button" id="deleteRoom" class="btn btn-danger btn-block">Delete Room</button>
+                <form id="deleteUserFRoom"><strong>User to Delete:</strong>
+                    <input type="text" name="username" id="username">
+                    <input type="submit" value="Remove User" class="btn btn-danger btn-block">
+                </form>
             </div>
         </div>
         <div class="container">
@@ -36,9 +41,9 @@
                         <div class="form-group">
                             <div class="input-group">
                                 <span class="input-group-addon">
-									<i class="glyphicon glyphicon-comment"></i>
-								</span>
-                                <input type="text" name="message" class="form-control" id="abc" />
+                                    <i class="glyphicon glyphicon-comment"></i>
+                                </span>
+                                <input type="text" name="message" class="form-control" id="message_text" />
                                 <input type="file" id="siofu_input" name="photo" class="form-control" />
                                 <select name="TTL" class="form-control">
                                     <option value="false">Regular</option>
@@ -46,7 +51,10 @@
                                 </select>
                             </div>
                         </div>
-                        <input type="submit" class="btn btn-default btn-block" id="submitb" />
+                        <input type="submit" class="btn btn-primary btn-block" id="submitb" />
+                    </form><br>
+                    <form id="exitRoom">
+                        <input type="submit" value="Exit Room" class="btn btn-danger btn-block">
                     </form>
                 </div>
             </div>

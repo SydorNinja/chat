@@ -32,13 +32,9 @@ module.exports = {
 	},
 	deleteRoom: function(user, body) {
 		return new Promise(function(resolve, reject) {
-			if (body != null && body.title != null) {
-				var where = body;
-				if (body.password) {
-					where.private = true;
-				} else {
-					where.private = false;
-				}
+			if (body != null) {
+				var where = {title: body};
+				console.log(where);
 				db.room.findOne({
 					where: where
 				}).then(function(room) {
@@ -51,7 +47,7 @@ module.exports = {
 							}
 						}).then(function(connection) {
 							if (connection != null) {
-								if (connection.get('role') == true) {
+								if (connection.role == 1) {
 									db.conversation.findAll({
 										where: {
 											roomId: room.id

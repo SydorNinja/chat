@@ -25,3 +25,8 @@ h1 {
 	float: right;
 	padding: 10px;
 }
+
+.left: {
+	float: left;
+	padding: 10px;
+}

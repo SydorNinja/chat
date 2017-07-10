@@ -1,24 +1,33 @@
 var _ = require('underscore');
 var db = require('./db.js');
 
-function idFinder(connections) {
-	var returnedArray = [];
-	for (var i = 0; i < connections.length; i++) {
-		returnedArray[i] = connections[i].userId;
-	}
-	return returnedArray;
+function a(connections) {
+	return new Promise(function(resolve, reject) {
+		connections.forEach(function(connection, i, connections) {
+			connections[i] = connection.userId;
+			if (i == connections.length - 1) {
+				resolve(connections);
+			}
+
+		});
+	});
 }
 
-function uFinder(idArray) {
-	var returnedArray = [];
-	for (var i = 0; i < idArray.length; i++) {
-		returnedArray[i] = db.user.findOne({
-			where: {
-				id: idArray[i]
-			}
+function b(ids) {
+	return new Promise(function(resolve, reject) {
+		ids.forEach(function(id, i, ids) {
+			var user = db.user.findOne({
+				where: {
+					id: id
+				}
+			}).then(function(user) {
+				ids[i] = user.username;
+				if (i == ids.length - 1) {
+					resolve(ids);
+				}
+			});
 		});
-	}
-	return returnedArray;
+	});
 }
 
 module.exports = {
@@ -77,9 +86,6 @@ module.exports = {
 		return new Promise(function(resolve, reject) {
 			var where = {};
 			where.title = body.room;
-			if (body.password) {
-				where.password = body.password
-			}
 			db.room.findOne({
 				where: where
 			}).then(function(room) {
@@ -88,20 +94,20 @@ module.exports = {
 				}
 				db.usersrooms.findOne({
 					where: {
-						roomId: room.get('id'),
-						userId: user.get('id')
+						roomId: room.id,
+						userId: user.id
 					}
 				}).then(function(connection) {
 					if (connection === null) {
-						reject();
+						return reject();
 					}
-					if (connection.role == true) {
+					if (connection.role == 1) {
 						db.user.findOne({
 							where: {
 								username: body.userToRemove
 							}
 						}).then(function(deleteUser) {
-							if (deleteUser === null) {
+							if (deleteUser == null) {
 								reject();
 							}
 							db.usersrooms.findOne({
@@ -124,6 +130,36 @@ module.exports = {
 						});
 					} else {
 						reject();
+					}
+				}, function() {
+					reject();
+				});
+			}, function() {
+				reject();
+			});
+		});
+	},
+	exitRoom: function(user, body) {
+		return new Promise(function(resolve, reject) {
+			var where = {};
+			where.title = body.room;
+			db.room.findOne({
+				where: where
+			}).then(function(room) {
+				if (room === null) {
+					reject();
+				}
+				db.usersrooms.findOne({
+					where: {
+						roomId: room.id,
+						userId: user.id
+					}
+				}).then(function(connection) {
+					if (connection === null) {
+						return reject();
+					} else {
+						connection.destroy();
+						resolve();
 					}
 				}, function() {
 					reject();
@@ -243,34 +279,36 @@ module.exports = {
 			});
 		});
 	},
-	usersInRoom: function(roomTitle) {
+	usersInRoom: function(roomTitle, user) {
 		return new Promise(function(resolve, reject) {
 			db.room.findOne({
 				where: {
 					title: roomTitle
 				}
 			}).then(function(room) {
-				if (room == null) {
-					reject();
-				}
-				db.usersrooms.findAll({
+				db.usersrooms.findOne({
 					where: {
-						roomId: room.id
+						roomId: room.id,
+						userId: user.id
 					}
-				}).then(function(connections) {
-					if (connections == null || connections[0] == null) {
+				}).then(function(connection) {
+					if (connection == null || connection.role != 1) {
 						reject();
 					} else {
-						var ids = idFinder(connections)
-						resolve(uFinder(ids));
-
+						db.usersrooms.findAll({
+							where: {
+								roomId: room.id
+							}
+						}).then(function(connections) {
+							a(connections).then(function(ids) {
+								b(ids).then(function(usernames) {
+									resolve(ids);
+								});
+							});
+						});
 					}
-				}, function() {
-					reject();
-				});
-			}, function() {
-				reject();
-			});
+				})
+			})
 		});
 	}
 }

@@ -57,15 +57,6 @@ app.post('/upload', middleware.requireAuthentication, upload.single('sampleFile'
 	}
 });
 
-app.delete('/room', middleware.requireAuthentication, function(req, res) {
-	var body = _.pick(req.body, 'private', 'password', 'title');
-	roomcontroller.deleteRoom(req.user, body).then(function() {
-		res.status(204).send();
-	}, function() {
-		res.status(401).send();
-	});
-});
-
 
 
 //todo
@@ -151,14 +142,6 @@ app.post('/changeDetails', middleware.requireAuthentication, function(req, res) 
 	});
 });
 
-app.post('/room/search', function(req, res) {
-	var title = req.body.title;
-	roomcontroller.findRoomByTitle(title).then(function(publicFormRoom) {
-		res.json(publicFormRoom);
-	}, function() {
-		res.status(404);
-	});
-});
 
 app.post('/favorite', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, "room", "favorite");
@@ -206,16 +189,6 @@ app.post('/signin', middleware.validCheck, function(req, res) {
 	});
 });
 
-app.delete('/userFromRoom', middleware.requireAuthentication, function(req, res) {
-	var body = _.pick(req.body, 'room', 'password', 'userToRemove');
-	usersroomscontroller.deleteUserFromRoom().then(function() {
-		res.status(204).send();
-	}, function() {
-		res.status(401).send();
-	});
-});
-
-
 //signout is truely delete
 app.get('/signout', middleware.requireAuthentication, function(req, res) {
 	usercontroller.signout(req.user).then(function() {
@@ -225,13 +198,6 @@ app.get('/signout', middleware.requireAuthentication, function(req, res) {
 	});
 });
 
-app.get('/myRooms', middleware.requireAuthentication, function(req, res) {
-	usersroomscontroller.rooms(req.user).then(function(rooms) {
-		res.send('My Rooms:' + rooms);
-	}, function() {
-		res.status(401).send();
-	});
-});
 
 app.post('/deleteUser', middleware.requireAuthentication, function(req, res) {
 	usercontroller.deleteUser(req.user).then(function() {
@@ -250,31 +216,7 @@ app.post('/connectViaInvite', middleware.requireAuthentication, function(req, re
 	});
 });
 
-app.get('/favoriteRooms', middleware.requireAuthentication, function(req, res) {
-	usersroomscontroller.favoriteRooms(req.user).then(function(rooms) {
-		res.send('My Favorite Rooms:' + rooms);
-	}, function() {
-		res.status(401).send();
-	});
-});
 
-app.post('/uploadMessage', middleware.requireAuthentication, function(req, res) {
-	var body = _.pick(req.body, 'text', 'TTL', 'mType', 'photo');
-	var message = {
-		text: body.text,
-		time: moment().valueOf(),
-		userId: req.user.id,
-		roomId: 2,
-		sender: req.user.username,
-		// photo: photo,
-		mType: 'text'
-	};
-	if (typeof(body.TTL) === 'boolean') {
-		message.TTL = body.TTL;
-	}
-	conversationcontroller.upload(message);
-	res.status(200).send();
-});
 
 app.get('/messages101/:roomTitle', middleware.requireAuthentication, function(req, res) {
 	conversationcontroller.sendToMail(req.user, req.params.roomTitle).then(function(messages) {
@@ -284,44 +226,7 @@ app.get('/messages101/:roomTitle', middleware.requireAuthentication, function(re
 	});
 });
 
-app.post('/messagesReader', middleware.requireAuthentication, function(req, res) {
-	conversationcontroller.alternativeNM(req.body.title, req.body.number).then(function(messages) {
-		res.send(messages);
-	}, function() {
-		res.status(400).send();
-	});
-});
 
-app.post('/messages/days', middleware.requireAuthentication, function(req, res) {
-	conversationcontroller.seeNLastDays(req.body.title, req.body.days).then(function(messages) {
-		res.send(messages);
-	}, function() {
-		res.status(400).send();
-	});
-});
-
-app.delete('/conversation', middleware.requireAuthentication, function(req, res) {
-	conversationcontroller.clearConversation(req.user, req.body.title).then(function() {
-		res.status(204).send();
-	}, function() {
-		res.status(400).send();
-	});
-});
-
-app.delete('/message', middleware.requireAuthentication, function(req, res) {
-	conversationcontroller.deleteMessage(req.user, req.body.id).then(function() {
-		res.status(204).send();
-	}, function() {
-		res.status(400).send();
-	});
-});
-app.put('/message', middleware.requireAuthentication, function(req, res) {
-	conversationcontroller.editMessage(req.user, req.body.id, req.body.message).then(function() {
-		res.status(204).send();
-	}, function() {
-		res.status(400).send();
-	});
-});
 
 function sendCurrentUsers(socket) {
 	var info = clientInfo[socket.id];
@@ -339,14 +244,14 @@ function sendCurrentUsers(socket) {
 		}
 	});
 
-	socket.emit('message', {
-		name: 'System',
+	socket.emit('Smessage', {
+		sender: 'System',
 		text: 'Current users: ' + users.join(', '),
 		timestamp: moment().valueOf()
 	});
 }
 
-function sendPrivate(message) {
+function sendPrivate(message, username) {
 	var text = message.text.replace('@private', ' ').trim();
 	if (text != null && text.length > 0) {
 		console.log('private != null');
@@ -354,10 +259,10 @@ function sendPrivate(message) {
 		Object.keys(clientInfo).forEach(function(socketId) {
 			var name = clientInfo[socketId].name;
 			if (arrayText[0] == name) {
-				io.to(socketId).emit('message', {
+				io.to(socketId).emit('Smessage', {
 					text: text.replace(name, ' ').trim(),
-					timestamp: message.timestamp,
-					name: message.name
+					timestamp: moment().valueOf(),
+					sender: username
 				});
 			}
 		});
@@ -367,6 +272,7 @@ function sendPrivate(message) {
 io.on('connection', function(socket) {
 	var uploader = new SocketIOFileUploadServer();
 	uploader.dir = "C:/Users/Owner/Desktop/Robert/NodeJs/projects/chat/uploads";
+	console.log('path: ' + __dirname);
 	uploader.listen(socket);
 	var token = socket.handshake.headers.cookie.split(" ");
 	if (token[1]) {
@@ -387,7 +293,7 @@ io.on('connection', function(socket) {
 		var userData = clientInfo[socket.id];
 		if (typeof userData != 'undefined') {
 			socket.leave(userData.room);
-			io.to(userData.room).emit('message', {
+			io.to(userData.room).emit('Smessage', {
 				sender: 'System',
 				text: userData.name + ' has left!',
 				timestamp: moment().valueOf()
@@ -440,14 +346,62 @@ io.on('connection', function(socket) {
 		clientInfo[socket.id] = req;
 		console.log(clientInfo[socket.id]);
 		socket.join(req.room);
-		socket.broadcast.to(req.room).emit('message', {
+		socket.broadcast.to(req.room).emit('Smessage', {
 			sender: 'System',
 			text: req.name + ' has joined!',
 			timestamp: moment().valueOf()
 		});
 	});
+	socket.on('deleteMessage', function(request) {
+		var id = request.id;
+		conversationcontroller.deleteMessage(socket.chatUser, id).then(function() {
+			io.to(clientInfo[socket.id].room).emit('requireM', {});
+		});
+	});
+	socket.on('delete', function() {
+		console.log('delete');
+		roomcontroller.deleteRoom(socket.chatUser, clientInfo[socket.id].room).then(function() {
+			io.to(clientInfo[socket.id].room).emit('land', {});
+		});
+	});
+	socket.on('changeMessage', function(request) {
+		var id = request.id;
+		var messageUpload = {};
+		console.log(messageUpload);
+		if (_.isString(request.messageUpload.text)) {
+			messageUpload.text = request.messageUpload.text;
+			console.log(messageUpload);
+		} else {
+			messageUpload.text = null;
+		}
+
+		if (_.isString(request.messageUpload.photo)) {
+			setTimeout(function() {
+				fs.readFile('C:/Users/Owner/Desktop/Robert/NodeJs/projects/chat/uploads/' + request.messageUpload.photo, function(err, data) {
+					var photoname = request.messageUpload.photo;
+					console.log(data);
+					var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
+					console.log(base64Image);
+					messageUpload.photo = base64Image;
+					fs.unlink('C:/Users/Owner/Desktop/Robert/NodeJs/projects/chat/uploads/' + photoname);
+				});
+
+				conversationcontroller.editMessage(socket.chatUser, id, messageUpload).then(function() {
+					io.to(clientInfo[socket.id].room).emit('requireM', {});
+				});
 
 
+
+			}, 1000);
+		} else {
+			messageUpload.photo = null;
+			conversationcontroller.editMessage(socket.chatUser, id, messageUpload).then(function() {
+				io.to(clientInfo[socket.id].room).emit('requireM', {});
+			});
+		}
+		console.log(id);
+		console.log(request);
+	});
 
 	socket.on('message', function(message) {
 		var original = message;
@@ -455,10 +409,21 @@ io.on('connection', function(socket) {
 		console.log('Message received: ' + message.text);
 
 		if (message.text == '@currentUsers') {
+			console.log("currentUsers");
 			sendCurrentUsers(socket);
 		} else if (message.text != undefined && message.text.search('@private') != -1) {
 			console.log('private');
-			sendPrivate(message);
+			sendPrivate(message, socket.chatUser.username);
+		} else if (message.text != undefined && message.text == '@users') {
+			console.log('users');
+			usersroomscontroller.usersInRoom(clientInfo[socket.id].room, socket.chatUser).then(function(users) {
+				var text = 'Users in Room: '+users;
+				socket.emit('Smessage', {
+					sender: 'System',
+					text: text,
+					timestamp: moment().valueOf()
+				})
+			});
 		} else {
 			var message = {
 				time: moment().valueOf(),
@@ -493,13 +458,13 @@ io.on('connection', function(socket) {
 							message.roomId = room.id;
 							if (message.TTL == true) {
 								console.log('ok');
-								io.to(clientInfo[socket.id].room).emit('message', message);
+								io.to(clientInfo[socket.id].room).emit('requireM', {});
 								conversationcontroller.upload(message).then(function() {
 									io.to(clientInfo[socket.id].room).emit('requireM', {});
 								});
 							} else {
 								conversationcontroller.upload(message);
-								io.to(clientInfo[socket.id].room).emit('message', message);
+								io.to(clientInfo[socket.id].room).emit('requireM', {});
 							}
 
 
@@ -516,13 +481,13 @@ io.on('connection', function(socket) {
 						message.roomId = room.id;
 						if (message.TTL == true) {
 							console.log('ok');
-							io.to(clientInfo[socket.id].room).emit('message', message);
+							io.to(clientInfo[socket.id].room).emit('requireM', {});
 							conversationcontroller.upload(message).then(function() {
 								io.to(clientInfo[socket.id].room).emit('requireM', {});
 							});
 						} else {
 							conversationcontroller.upload(message);
-							io.to(clientInfo[socket.id].room).emit('message', message);
+							io.to(clientInfo[socket.id].room).emit('requireM', {});
 						}
 
 
@@ -533,15 +498,35 @@ io.on('connection', function(socket) {
 		}
 	});
 
-	socket.emit('message', {
-		name: 'System',
+	socket.emit('Smessage', {
+		sender: 'System',
 		text: 'Welcome to the chat application',
 		timestamp: moment().valueOf()
 	});
 
+	socket.on('deleteUserFRoom', function(username) {
+		var input = {
+			userToRemove: username
+		};
+		input.room = clientInfo[socket.id].room;
+		console.log(input);
+		usersroomscontroller.deleteUserFromRoom(socket.chatUser, input).then(function() {});
+	});
+	socket.on('exitRoom', function(username) {
+		var input = {
+			userToRemove: socket.chatUser.username
+		};
+		input.room = clientInfo[socket.id].room;
+		console.log(input);
+		usersroomscontroller.exitRoom(socket.chatUser, input).then(function() {});
+	});
+
+
 	socket.on('clear', function(obj) {
-		conversationcontroller.clearConversation(socket.chatUser, clientInfo[socket.id].room).then(function() {});
-		io.to(clientInfo[socket.id].room).emit('requireM', {});
+		conversationcontroller.clearConversation(socket.chatUser, clientInfo[socket.id].room).then(function() {
+			io.to(clientInfo[socket.id].room).emit('requireM', {});
+		});
+
 	});
 });
 

@@ -30,17 +30,11 @@ module.exports = function(sequelize, DataTypes) {
 	}, {
 		instanceMethods: {
 			toPublic: function() {
-				return _.pick(this, 'sender', 'time', 'photo', 'text');
+				return _.pick(this, 'sender', 'time', 'photo', 'text', 'id');
 			},
 			toPublicJSON: function() {
-				var data;
-				if (this.photo) {
-					data = 'photo';
-				} else {
-					data = 'text'
-				}
 				var json = this.toJSON();
-				return _.pick(json, 'sender', 'time', data);
+				return _.pick(json, 'sender', 'time', 'photo', 'text', 'id');
 			}
 		}
 	});

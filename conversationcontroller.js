@@ -62,8 +62,10 @@ module.exports = {
 		});
 
 	},
+	//todo
 	seeMessages: function(title, user) {
 		return new Promise(function(resolve, reject) {
+			var result = {};
 			var messages = [];
 			db.room.findOne({
 				where: {
@@ -79,11 +81,10 @@ module.exports = {
 					}
 				}).then(function(messages) {
 					if (messages.length == 0) {
-						return resolve({
-							message: 'no messages'
-						});
+						result.message = 'no messages';
+						db
 					} else {
-						result = Publicating(messages, messages.length);
+						result.result = Publicating(messages, messages.length);
 					}
 
 				}).then(function() {
@@ -97,14 +98,14 @@ module.exports = {
 								reject();
 							} else {
 								if (connection.role == 1) {
-									var admin = {
-										role: 1,
-										result: result
-									}
-									resolve(admin);
+
+									result.role = 1;
+									result.username = user.username;
+									resolve(result);
 								} else {
-									var regular = {result: result};
-									resolve(regular);
+
+									result.username = user.username;
+									resolve(result);
 								}
 
 							}
@@ -251,9 +252,7 @@ module.exports = {
 				if (message == undefined) {
 					reject();
 				}
-				attributes = {
-					text: messageUpload
-				};
+				attributes = messageUpload;
 				message.update(attributes);
 				resolve(message);
 			}, function() {
