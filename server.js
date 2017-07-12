@@ -17,7 +17,7 @@ var conversationcontroller = require('./conversationcontroller');
 var multer = require('multer');
 var fs = require('fs');
 var upload = multer({
-	dest: '/uploads'
+	dest: 'uploads/'
 });
 var io = require('socket.io')(http);
 var moment = require('moment');
