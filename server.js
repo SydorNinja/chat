@@ -38,7 +38,7 @@ app.post('/signup', function(req, res) {
 	usercontroller.signup(body).then(function(user) {
 		res.send('Please Validate your account through mail');
 	}, function(error) {
-		res.status(400).send(error +' '+ body);
+		res.status(400).send(error);
 	});
 });
 
