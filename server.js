@@ -29,15 +29,19 @@ var tokener = require('./tokenFind');
 var SocketIOFileUploadServer = require("socketio-file-upload");
 SocketIOFileUploadServer.listen(app);
 app.use(SocketIOFileUploadServer.router);
+
+
+
 app.post('/signup', function(req, res) {
 	var body = _.pick(req.body, 'email', 'password', 'username');
 	console.log(body);
 	usercontroller.signup(body).then(function(user) {
 		res.send('Please Validate your account through mail');
-	}, function() {
-		res.status(400).send('Error');
+	}, function(error) {
+		res.status(400).send(error);
 	});
 });
+
 var Auth;
 
 app.post('/upload', middleware.requireAuthentication, upload.single('sampleFile'), function(req, res, next) {
@@ -107,8 +111,8 @@ app.post('/loginRoom', middleware.requireAuthentication, function(req, res) {
 	console.log(body);
 	usersroomscontroller.loginRoom(req.user, body).then(function() {
 		res.status(204).send();
-	}, function(error) {
-		res.status(401).send(error);
+	}, function() {
+		res.status(401).send();
 	});
 });
 
