@@ -42,7 +42,6 @@ var Auth;
 
 app.post('/upload', middleware.requireAuthentication, upload.single('sampleFile'), function(req, res, next) {
 	try {
-		console.log(req.file.path);
 		fs.readFile(req.file.path, function(err, data) {
 			var base64Image = 'data:image/png;base64,' + new Buffer(data, 'binary').toString('base64');
 			fs.unlink(req.file.path);
