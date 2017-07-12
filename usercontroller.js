@@ -145,6 +145,7 @@ module.exports = {
 					"TextBody": "enter the link: http://localhost:3000/verify?vh=" + user.validHash + ""
 				}, function(error, success) {
 					if (error) {
+						console.log('bad');
 						reject();
 					} else {
 						resolve(user);
