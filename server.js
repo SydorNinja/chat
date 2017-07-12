@@ -59,15 +59,6 @@ app.post('/upload', middleware.requireAuthentication, upload.single('sampleFile'
 
 
 
-//todo
-app.get('/users/:roomTitle', function(req, res) {
-	usersroomscontroller.usersInRoom(req.params.roomTitle).then(function(users) {
-		res.send(users);
-	}, function() {
-		res.status(400).send();
-	});
-});
-
 app.post('/room', middleware.requireAuthentication, function(req, res) {
 	var body = _.pick(req.body, 'title', 'password');
 	roomcontroller.makeRoom(req.user, body).then(function(publicFormRoom) {
@@ -213,16 +204,6 @@ app.post('/connectViaInvite', middleware.requireAuthentication, function(req, re
 		res.status(204).send();
 	}, function() {
 		res.status(401).send();
-	});
-});
-
-
-
-app.get('/messages101/:roomTitle', middleware.requireAuthentication, function(req, res) {
-	conversationcontroller.sendToMail(req.user, req.params.roomTitle).then(function(messages) {
-		res.send(messages);
-	}, function() {
-		res.status(400).send();
 	});
 });
 
@@ -521,6 +502,9 @@ io.on('connection', function(socket) {
 		usersroomscontroller.exitRoom(socket.chatUser, input).then(function() {});
 	});
 
+	socket.on('sendMail', function(){
+		conversationcontroller.sendToMail(socket.chatUser, clientInfo[socket.id].room);
+	});
 
 	socket.on('clear', function(obj) {
 		conversationcontroller.clearConversation(socket.chatUser, clientInfo[socket.id].room).then(function() {

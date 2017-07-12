@@ -240,6 +240,14 @@ $exitRoom.on('submit', function(event) {
 });
 
 
+$sendMail = jQuery('#sendMail');
+$sendMail.on('submit', function(event) {
+	event.preventDefault();
+	socket.emit('sendMail', {});
+});
+
+
+
 
 $('#clearAdmin').click(function(event) {
 	socket.emit('clear', {});

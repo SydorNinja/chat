@@ -32,6 +32,27 @@ function daysCalc(messages, days) {
 	return messages;
 }
 
+function a(conversations) {
+	console.log('101');
+	return new Promise(function(resolve, reject) {
+		var htmlConversetions = '<ul>';
+		conversations.forEach(function(message, i, array) {
+			htmlConversetions = htmlConversetions + '<li>';
+			htmlConversetions = htmlConversetions + '<p><strong>' + message.sender + ' ' + moment.utc(message.time).format('h:mm a') + '</strong></p>';
+			if (message.photo != null) {
+				htmlConversetions = htmlConversetions + '<p><strong> </strong></p>' + '<img src=' + message.photo + ' style= width:50px height:100px>';
+			}
+			if (message.text != null) {
+				htmlConversetions = htmlConversetions + '<p><strong>' + message.text + '</strong></p>';
+			}
+			htmlConversetions = htmlConversetions + '</li>';
+		});
+		htmlConversetions = htmlConversetions + '</ul>';
+		resolve(htmlConversetions);
+
+	});
+}
+
 module.exports = {
 	upload: function(message) {
 		return new Promise(function(resolve, reject) {
@@ -62,7 +83,6 @@ module.exports = {
 		});
 
 	},
-	//todo
 	seeMessages: function(title, user) {
 		return new Promise(function(resolve, reject) {
 			var result = {};
@@ -267,42 +287,48 @@ module.exports = {
 					title: roomTitle
 				}
 			}).then(function(room) {
-				if (room == undefined) {
+				if (room == null) {
 					reject();
+				} else {
+					db.usersrooms.findOne({
+						where: {
+							userId: user.id,
+							roomId: room.id
+						}
+					}).then(function(connection) {
+						if (connection == null) {
+							reject();
+						} else {
+							db.conversation.findAll({
+								where: {
+									roomId: room.id
+								}
+							}).then(function(conversations) {
+								if (conversations == null) {
+
+								} else {
+									a(conversations).then(function(htmlConversetions) {
+										client.sendEmail({
+											"From": "denys@pomvom.com",
+											"To": "" + user.email + "",
+											"Subject": "conversations",
+											"HtmlBody": "" + htmlConversetions + ""
+										}, function(error, success) {
+											if (error) {
+												console.log(error);
+												reject();
+											} else {
+												resolve();
+											}
+										});
+										resolve(htmlConversetions);
+									});
+								}
+							});
+						}
+					});
 				}
-				var sendText;
-				db.conversation.findAll({
-					where: {
-						roomId: room.id
-					}
-				}).then(function(messages) {
-					if (messages == undefined || messages.length == 0) {
-						return reject({
-							message: 'nothing to send'
-						});
-					} else {
-						result = PublicatingJSON(messages, messages.length);
-						client.sendEmail({
-							"From": "denyss@perfectomobile.com",
-							"To": "" + user.email + "",
-							"Subject": "conversations",
-							"TextBody": "" + result + ""
-						}, function(error, success) {
-							if (error) {
-								reject();
-							} else {
-								resolve();
-							}
-						});
-					}
-				}, function() {
-					reject();
-				});
-			}, function() {
-				reject();
 			});
-		}, function() {
-			reject();
 		});
 	},
 	seeNLastDays: function(title, days) {
