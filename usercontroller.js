@@ -146,13 +146,13 @@ module.exports = {
 				}, function(error, success) {
 					if (error) {
 						console.log('bad');
-						reject();
+						reject({"error":"mail"});
 					} else {
 						resolve(user);
 					}
 				});
 			}, function(e) {
-				reject();
+				reject({"error":"db"});
 			});
 		});
 	},

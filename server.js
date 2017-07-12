@@ -107,8 +107,8 @@ app.post('/loginRoom', middleware.requireAuthentication, function(req, res) {
 	console.log(body);
 	usersroomscontroller.loginRoom(req.user, body).then(function() {
 		res.status(204).send();
-	}, function() {
-		res.status(401).send();
+	}, function(error) {
+		res.status(401).send(error);
 	});
 });
 
