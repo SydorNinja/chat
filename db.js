@@ -3,11 +3,11 @@ var env = process.env.NODE_ENV || 'development';
 var sequelize;
 
 if (env == 'production') {
-	sequelize = new Sequelize('postgres://podognssmdfzqe:b83539bd6c53faf1bd64a954ba1f2913fcaa00fb4f8ccf6e91511a82e9929f41@ec2-54-163-254-143.compute-1.amazonaws.com:5432/ddd4b17fpa08kl', {
+	sequelize = new Sequelize(process.env.DATABASE_URL, {
 		dialect: 'postgres',
 		protocol: 'postgres',
-		port: '5432',
-		host: 'ec2-54-163-254-143.compute-1.amazonaws.com',
+		port: process.env.PORT,
+		host: process.env.host,
 		logging: true //false
 	});
 } else {

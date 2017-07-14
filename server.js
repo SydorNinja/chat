@@ -524,5 +524,6 @@ db.sequelize.sync(
 ).then(function() {
 	http.listen(PORT, function() {
 		console.log('Server started!');
+		console.log(process.env);
 	});
 });
