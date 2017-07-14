@@ -1,5 +1,4 @@
-/data 
-.sqlite
+/data *.sqlite
 /node_modules
 /*gc.cmd
 gs.cmd
