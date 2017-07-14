@@ -6,6 +6,8 @@ if (env == 'production') {
 	sequelize = new Sequelize(process.env.DATABASE_URL, {
 		dialect: 'postgres',
 		protocol: 'postgres',
+		port: process.env.PORT,
+		host: process.env.host,
 		logging: true //false
 	});
 } else {
