@@ -4,8 +4,16 @@ var sequelize;
 
 console.log('environment = ' + env);
 if (env == 'production') {
-	sequelize = new Sequelize(process.env.DATABASE_URL, {
-		dialect: 'postgres'
+	var match = process.env.DATABASE_URL.match(/postgres:\/\/([^:]+):([^@]+)@([^:]+):(\d+)\/(.+)/)
+	sequelize = new Sequelize(match[5], match[1], match[2], {
+		dialect: 'postgres',
+		protocol: 'postgres',
+		port: match[4],
+		host: match[3],
+		logging: false,
+		dialectOptions: {
+			ssl: true
+		}
 	});
 } else {
 	sequelize = new Sequelize(undefined, undefined, undefined, {
